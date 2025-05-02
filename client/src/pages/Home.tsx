@@ -31,9 +31,11 @@ export default function Home() {
     isSpeechSupported
   } = useSpeechSynthesis();
   
-  // État pour la simulation audio
+  // État pour la simulation audio et le lecteur audio
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationVolume, setSimulationVolume] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<number | null>(null);
   
   // Get the current volume for mouth animation
@@ -93,8 +95,58 @@ export default function Home() {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      
+      // Nettoyer les URL d'objet
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
     };
-  }, []);
+  }, [audioUrl]);
+  
+  // Configurer les écouteurs d'événements pour l'élément audio
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    const handleAudioEnd = () => {
+      console.log("Lecture audio terminée");
+      setIsSimulating(false);
+      setSimulationVolume(0);
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+    
+    const handleAudioError = (e: Event) => {
+      console.error("Erreur de lecture audio:", e);
+      setIsSimulating(false);
+      setSimulationVolume(0);
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      toast({
+        title: "Erreur de lecture audio",
+        description: "Impossible de lire le fichier audio",
+        variant: "destructive"
+      });
+    };
+    
+    // Ajouter les écouteurs
+    audioRef.current.addEventListener('ended', handleAudioEnd);
+    audioRef.current.addEventListener('error', handleAudioError);
+    
+    // Nettoyer
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('ended', handleAudioEnd);
+        audioRef.current.removeEventListener('error', handleAudioError);
+      }
+    };
+  }, [toast]);
 
   // Handle toggle listening
   const handleToggleListen = () => {
@@ -181,11 +233,51 @@ export default function Home() {
       
       // À partir d'ici on traite les objets de réponse
       
-      // Cas 2: Si on a une URL audio (actuellement désactivé dans l'API)
+      // Cas 2: Si on a une URL audio
       if (response?.audioUrl) {
-        console.log("Simulation pour fichier audio:", response.audioUrl);
-        // Simuler l'audio au lieu de le jouer
-        simulateAudio(6000);
+        console.log("Fichier audio réel reçu:", response.audioUrl);
+        
+        // Nettoyer l'ancienne URL si elle existe
+        if (audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+        }
+        
+        // Enregistrer l'URL pour afficher le lecteur audio
+        setAudioUrl(response.audioUrl);
+        
+        // Jouer directement l'audio
+        if (audioRef.current) {
+          console.log("Lecture du fichier audio via l'élément audio");
+          audioRef.current.src = response.audioUrl;
+          audioRef.current.load();
+          
+          // On met en place les événements pour la synchronisation de la bouche
+          const playPromise = audioRef.current.play();
+          
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                console.log("Lecture audio démarrée avec succès");
+                setIsSimulating(true);
+                // Simuler les mouvements de bouche pendant la lecture
+                intervalRef.current = window.setInterval(() => {
+                  const minVolume = 0.2;
+                  const maxVolume = 0.8;
+                  const randomVolume = Math.random() * (maxVolume - minVolume) + minVolume;
+                  setSimulationVolume(randomVolume);
+                }, 150);
+              })
+              .catch(error => {
+                console.error("Erreur lors de la lecture audio:", error);
+                // En cas d'échec, on utilise la simulation
+                simulateAudio(6000);
+              });
+          }
+        } else {
+          // Fallback si l'élément audio n'est pas disponible
+          console.warn("Élément audio non disponible, utilisation de la simulation");
+          simulateAudio(6000);
+        }
         
         toast({
           title: "Audio généré",
@@ -318,6 +410,22 @@ export default function Home() {
               Envoyer
             </button>
           </form>
+          
+          {/* Élément Audio caché pour la lecture des fichiers MP3 */}
+          <audio ref={audioRef} style={{ display: 'none' }} controls />
+          
+          {/* Section de Debug (peut être masquée en production) */}
+          {audioUrl && (
+            <div className="mt-4 p-3 bg-gray-800 rounded text-white text-xs">
+              <div className="mb-2 font-bold">Audio Debug:</div>
+              <div className="overflow-hidden text-ellipsis">URL: {audioUrl}</div>
+              
+              {/* Audio Player visible en mode debug */}
+              <div className="mt-2">
+                <audio src={audioUrl} controls className="w-full h-8" />
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
