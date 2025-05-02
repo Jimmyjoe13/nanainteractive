@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,34 +31,13 @@ export default function Home() {
     isSpeechSupported
   } = useSpeechSynthesis();
   
-  // Audio player for MP3 files from webhook
-  const {
-    playAudio,
-    stopAudio,
-    isPlaying: isPlayingAudio,
-    volume: audioVolume
-  } = useAudioPlayer({
-    onPlayStart: () => {
-      console.log("Lecture du fichier audio démarrée");
-      setIsTalking(true);
-    },
-    onPlayEnd: () => {
-      console.log("Lecture du fichier audio terminée");
-      setIsTalking(false);
-    },
-    onError: (error: string) => {
-      console.error("Erreur de lecture audio:", error);
-      toast({
-        title: "Erreur de lecture audio",
-        description: error,
-        variant: "destructive"
-      });
-      setIsTalking(false);
-    }
-  });
+  // État pour la simulation audio
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationVolume, setSimulationVolume] = useState(0);
+  const intervalRef = useRef<number | null>(null);
   
-  // Get the current volume for mouth animation (from audio player or speech synthesis)
-  const currentVolume = isPlayingAudio ? audioVolume : (isSpeaking ? 0.5 : 0);
+  // Get the current volume for mouth animation
+  const currentVolume = isSimulating ? simulationVolume : (isSpeaking ? 0.5 : 0);
   
   // Check for transcript changes
   useEffect(() => {
@@ -70,10 +48,53 @@ export default function Home() {
   
   // Update isTalking when speaking status changes from TTS
   useEffect(() => {
-    if (!isPlayingAudio) { // Only update if we're not already playing an audio file
-      setIsTalking(isSpeaking);
+    setIsTalking(isSpeaking || isSimulating);
+  }, [isSpeaking, isSimulating]);
+  
+  // Simulation d'audio pour animer la bouche quand on a un fichier audio
+  const simulateAudio = (duration = 5000) => {
+    // Nettoyage de toute simulation précédente
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-  }, [isSpeaking, isPlayingAudio]);
+    
+    console.log("Démarrage de la simulation audio");
+    
+    // Attendre un peu pour simuler la latence
+    setTimeout(() => {
+      setIsSimulating(true);
+      
+      // Générer des valeurs de volume aléatoires pour animer la bouche
+      intervalRef.current = window.setInterval(() => {
+        const minVolume = 0.2;
+        const maxVolume = 0.8;
+        const randomVolume = Math.random() * (maxVolume - minVolume) + minVolume;
+        setSimulationVolume(randomVolume);
+      }, 150);
+      
+      // Arrêter après la durée spécifiée
+      setTimeout(() => {
+        setIsSimulating(false);
+        setSimulationVolume(0);
+        
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }, duration);
+    }, 300);
+  };
+  
+  // Nettoyer les intervalles lors du démontage
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Handle toggle listening
   const handleToggleListen = () => {
@@ -114,8 +135,14 @@ export default function Home() {
         stopSpeaking();
       }
       
-      if (isPlayingAudio) {
-        stopAudio();
+      if (isSimulating) {
+        // Arrêter la simulation
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        setIsSimulating(false);
+        setSimulationVolume(0);
       }
       
       setIsProcessing(true);
@@ -156,8 +183,15 @@ export default function Home() {
       
       // Cas 2: Si on a une URL audio (actuellement désactivé dans l'API)
       if (response?.audioUrl) {
-        console.log("Lecture du fichier audio:", response.audioUrl);
-        playAudio(response.audioUrl);
+        console.log("Simulation pour fichier audio:", response.audioUrl);
+        // Simuler l'audio au lieu de le jouer
+        simulateAudio(6000);
+        
+        toast({
+          title: "Audio généré",
+          description: "Écoute de la réponse...",
+          variant: "default"
+        });
       }
       // Cas 3: Si on a du texte
       else if (response?.text) {
@@ -176,8 +210,8 @@ export default function Home() {
       // Cas 4: Si on a un fichier audio mais pas d'URL, on simule la parole
       else if (response?.mimeType && response.mimeType.includes('audio')) {
         console.log("Simulation de parole pour un fichier audio non accessible");
-        // Utilisez le playAudio sans URL pour simuler la parole
-        playAudio();
+        // Simuler la parole
+        simulateAudio(5000);
         
         toast({
           title: "Information",
@@ -217,8 +251,14 @@ export default function Home() {
       stopSpeaking();
     }
     
-    if (isPlayingAudio) {
-      stopAudio();
+    if (isSimulating) {
+      // Arrêter la simulation
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setIsSimulating(false);
+      setSimulationVolume(0);
     }
     
     processUserInput(userMessage);
