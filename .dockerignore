@@ -8,4 +8,3 @@ client/dist
 !.env.example
 .vscode
 .DS_Store
-railway*.js
