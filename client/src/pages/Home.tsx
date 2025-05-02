@@ -134,38 +134,63 @@ export default function Home() {
       // Log the response we get from the webhook
       console.log("Réponse reçue du webhook n8n:", response);
       
-      // Check if we have an audio file to play
-      if (response.audioUrl) {
+      console.log("Réponse complète reçue:", response);
+      
+      // Cas 1: Si la réponse est un string (ancienne implémentation)
+      if (typeof response === 'string') {
+        console.log("Réponse est un string, utilisation de la synthèse vocale:", response);
+        if (isSpeechSupported) {
+          speak(response);
+        } else {
+          console.warn("Synthèse vocale non supportée par ce navigateur");
+          toast({
+            title: "Message reçu",
+            description: response,
+            variant: "default"
+          });
+        }
+        return;
+      }
+      
+      // À partir d'ici on traite les objets de réponse
+      
+      // Cas 2: Si on a une URL audio (actuellement désactivé dans l'API)
+      if (response?.audioUrl) {
         console.log("Lecture du fichier audio:", response.audioUrl);
         playAudio(response.audioUrl);
-      } 
-      // Fallback to text-to-speech if no audio URL but we have text
-      else if (response.text) {
+      }
+      // Cas 3: Si on a du texte
+      else if (response?.text) {
         console.log("Utilisation de la synthèse vocale:", response.text);
         if (isSpeechSupported) {
           speak(response.text);
         } else {
           console.warn("Synthèse vocale non supportée par ce navigateur");
           toast({
-            title: "Avertissement",
-            description: "Votre navigateur ne supporte pas la synthèse vocale",
+            title: "Message reçu",
+            description: response.text,
             variant: "default"
           });
         }
-      } 
-      // If response is still a string (for backward compatibility)
-      else if (typeof response === 'string') {
-        console.log("Réponse en format string, utilisation de la synthèse vocale:", response);
-        if (isSpeechSupported) {
-          speak(response);
-        }
       }
-      // No audio URL or text was found
+      // Cas 4: Si on a un fichier audio mais pas d'URL, on simule la parole
+      else if (response?.mimeType && response.mimeType.includes('audio')) {
+        console.log("Simulation de parole pour un fichier audio non accessible");
+        // Utilisez le playAudio sans URL pour simuler la parole
+        playAudio();
+        
+        toast({
+          title: "Information",
+          description: "Un fichier audio a été généré mais n'est pas accessible directement.",
+          variant: "default"
+        });
+      }
+      // Cas 5: Aucune information exploitable
       else {
-        console.error("Aucune réponse audio ou texte valide reçue:", response);
+        console.error("Aucune réponse valide reçue:", response);
         toast({
           title: "Erreur de format",
-          description: "La réponse du serveur n'est pas dans un format valide.",
+          description: "La réponse du serveur n'est pas dans un format utilisable.",
           variant: "destructive"
         });
       }

@@ -52,13 +52,56 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
     if (data.mimeType && data.mimeType.includes('audio')) {
       console.log('Audio response detected:', data);
       
-      // Generate audio URL
-      const audioUrl = `${webhookUrl}/data?fileName=${data.fileName}`;
-      console.log('Generated audio URL:', audioUrl);
+      // La structure de n8n ne nous permet pas d'accéder directement au fichier audio
+      console.log('Pas d\'accès direct au fichier audio, récupération du texte transcrit');
       
+      // Essayons de récupérer le texte qui devrait être dans la réponse (envoyé par n8n)
+      // Faisons une nouvelle requête pour récupérer la réponse texte de l'agent
+      try {
+        const textResponse = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: "Pouvez-vous répéter votre dernière réponse sous forme de texte uniquement?" })
+        });
+        
+        if (textResponse.ok) {
+          const textData = await textResponse.text();
+          let parsedTextData;
+          
+          try {
+            parsedTextData = JSON.parse(textData);
+          } catch (e) {
+            parsedTextData = { text: textData };
+          }
+          
+          const fallbackText = 
+            parsedTextData.message || 
+            parsedTextData.text || 
+            parsedTextData.response || 
+            parsedTextData.content ||
+            (typeof parsedTextData === 'string' ? parsedTextData : null) ||
+            "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.";
+          
+          console.log('Texte de fallback récupéré:', fallbackText);
+          
+          return {
+            text: fallbackText,
+            mimeType: data.mimeType,
+            fileType: data.fileType,
+            fileExtension: data.fileExtension,
+            fileName: data.fileName,
+            fileSize: data.fileSize
+          };
+        }
+      } catch (fallbackError) {
+        console.error('Erreur lors de la récupération du texte de secours:', fallbackError);
+      }
+      
+      // Si la requête échoue, on renvoie un message générique
       return {
-        text: "Je réfléchis...", // Placeholder text while audio loads
-        audioUrl: audioUrl,
+        text: "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.",
         mimeType: data.mimeType,
         fileType: data.fileType,
         fileExtension: data.fileExtension,

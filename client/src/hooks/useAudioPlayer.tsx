@@ -124,11 +124,41 @@ export default function useAudioPlayer({
   }, [cleanup, onPlayStart, onPlayEnd, onError]);
   
   // Play audio from URL
-  const playAudio = useCallback((url: string) => {
+  const playAudio = useCallback((url?: string) => {
     // First clean up any existing audio
     cleanup();
     
-    if (!audioRef.current) return;
+    // Si pas d'URL ou URL vide, on simule juste la bouche qui parle
+    if (!url || !audioRef.current) {
+      console.log('No valid URL provided, simulating speech pattern only');
+      
+      // Démarrer la simulation
+      setIsPlaying(true);
+      
+      // Informer le callback que la lecture a commencé
+      if (onPlayStart) onPlayStart();
+      
+      // Démarrer l'intervalle de volume pour la simulation
+      // (on le fait explicitement ici, même si useEffect le fait aussi)
+      intervalRef.current = window.setInterval(simulateVolumeData, 150);
+      
+      // Simuler pendant 4 secondes puis arrêter
+      setTimeout(() => {
+        setIsPlaying(false);
+        setVolume(0);
+        
+        // Nettoyer l'intervalle
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        
+        // Informer le callback que la lecture est terminée
+        if (onPlayEnd) onPlayEnd();
+      }, 4000);
+      
+      return;
+    }
     
     try {
       console.log('Playing audio from URL:', url);
@@ -147,14 +177,66 @@ export default function useAudioPlayer({
           })
           .catch(error => {
             console.error('Audio playback failed:', error);
+            
+            // Simuler la parole en cas d'échec (pour que la bouche bouge quand même)
+            setIsPlaying(true);
+            
+            // Informer le callback que la lecture a commencé (même si c'est simulé)
+            if (onPlayStart) onPlayStart();
+            
+            // Démarrer l'intervalle de volume pour la simulation
+            intervalRef.current = window.setInterval(simulateVolumeData, 150);
+            
+            // Simuler pendant 4 secondes puis arrêter
+            setTimeout(() => {
+              setIsPlaying(false);
+              setVolume(0);
+              
+              // Nettoyer l'intervalle
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+              
+              // Informer le callback que la lecture est terminée
+              if (onPlayEnd) onPlayEnd();
+            }, 4000);
+            
+            // Notifier de l'erreur, mais sans interrompre la simulation
             if (onError) onError('Impossible de démarrer la lecture audio');
           });
       }
     } catch (error) {
       console.error('Error playing audio:', error);
+      
+      // Simuler la parole en cas d'erreur (pour que la bouche bouge quand même)
+      setIsPlaying(true);
+      
+      // Informer le callback que la lecture a commencé (même si c'est simulé)
+      if (onPlayStart) onPlayStart();
+      
+      // Démarrer l'intervalle de volume pour la simulation
+      intervalRef.current = window.setInterval(simulateVolumeData, 150);
+      
+      // Simuler pendant 4 secondes puis arrêter
+      setTimeout(() => {
+        setIsPlaying(false);
+        setVolume(0);
+        
+        // Nettoyer l'intervalle
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        
+        // Informer le callback que la lecture est terminée
+        if (onPlayEnd) onPlayEnd();
+      }, 4000);
+      
+      // Notifier de l'erreur, mais sans interrompre la simulation
       if (onError) onError('Erreur lors de la lecture audio');
     }
-  }, [cleanup, onError]);
+  }, [cleanup, onError, onPlayStart, onPlayEnd, simulateVolumeData]);
   
   // Stop audio playback
   const stopAudio = useCallback(() => {
