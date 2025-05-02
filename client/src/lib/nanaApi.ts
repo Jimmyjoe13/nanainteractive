@@ -114,6 +114,8 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
     
     // Handle text-only response formats
     const text = 
+      // Check for n8n webhook format with data.output (comme visible dans l'exemple)
+      data.data?.output ||
       // Check standard format { message: "..." }
       data.message || 
       // Check for { text: "..." } format
@@ -124,7 +126,7 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
       data.content ||
       // Check for direct string in root
       (typeof data === 'string' ? data : null) ||
-      // Check for { data: { message: "..." } } format
+      // Check for other nested formats
       (data.data?.message || data.data?.text || data.data?.response || data.data?.content) ||
       // Default message if nothing found
       "Je suis désolée, j'ai eu du mal à comprendre. Pourriez-vous reformuler?";

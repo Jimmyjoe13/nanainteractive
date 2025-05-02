@@ -185,16 +185,10 @@ export default function Home() {
       // Case 1: If response is a string
       if (typeof response === 'string') {
         responseText = response;
-        if (isSpeechSupported) {
-          speak(responseText);
-        }
       }
       // Case 2: If response contains text
       else if (response?.text) {
         responseText = response.text;
-        if (isSpeechSupported) {
-          speak(responseText);
-        }
       }
       // Case 3: If we have an audio file but no text
       else if (response?.mimeType && response.mimeType.includes('audio')) {
@@ -212,6 +206,11 @@ export default function Home() {
         isUser: false, 
         timestamp: new Date() 
       }]);
+      
+      // Utiliser la synthèse vocale pour lire la réponse
+      if (isSpeechSupported && responseText) {
+        speak(responseText);
+      }
       
     } catch (error) {
       console.error('Error processing input:', error);
