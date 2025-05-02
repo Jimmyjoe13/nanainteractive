@@ -85,12 +85,31 @@ export default function Home() {
         inputRef.current.value = "";
       }
       
+      // Log the user's message
+      console.log("Envoi du message au webhook n8n:", text);
+      
       // Send to API
       const response = await sendMessageToNana(text);
       
-      // Speak response
-      if (isSpeechSupported) {
-        speak(response);
+      // Log the response we get from the webhook
+      console.log("Réponse reçue du webhook n8n:", response);
+      
+      // Ensure we have a valid response
+      if (response && typeof response === 'string') {
+        // Speak response
+        if (isSpeechSupported) {
+          console.log("Démarrage de la synthèse vocale avec le texte:", response);
+          speak(response);
+        } else {
+          console.warn("Synthèse vocale non supportée par ce navigateur");
+        }
+      } else {
+        console.error("Format de réponse invalide reçu du webhook:", response);
+        toast({
+          title: "Erreur de format",
+          description: "La réponse du serveur n'est pas dans un format valide.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error processing input:', error);

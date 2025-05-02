@@ -78,35 +78,16 @@ export function useSpeechSynthesis() {
     };
   }, []);
 
-  // Update volume in real-time
+  // Update volume in real-time - simplified version that doesn't require AudioContext
   const updateVolume = useCallback(() => {
-    if (!audioAnalysisData.analyser || !audioDataRef.current) return;
+    // This is now just a placeholder since we're using the simulated approach instead
+    // and the actual data will be updated directly in the setupSpeechAnalysis function
     
-    audioAnalysisData.analyser.getByteFrequencyData(audioDataRef.current);
-    
-    // Calculate average volume
-    let sum = 0;
-    const data = audioDataRef.current;
-    
-    for (let i = 0; i < data.length; i++) {
-      sum += data[i];
-    }
-    
-    const avgVolume = sum / data.length;
-    // Normalize to 0-1 range (255 is max value from getByteFrequencyData)
-    const normalizedVolume = avgVolume / 255;
-    
-    // Update volume in state
-    setAudioAnalysisData(prev => ({
-      ...prev,
-      volume: normalizedVolume
-    }));
-    
-    // Continue the loop
-    if (isSpeaking) {
+    // Continue the loop if speaking
+    if (isSpeaking && rafIdRef.current) {
       rafIdRef.current = requestAnimationFrame(updateVolume);
     }
-  }, [isSpeaking, audioAnalysisData.analyser]);
+  }, [isSpeaking]);
 
   // Find the best French female voice
   const getBestVoice = useCallback((text: string) => {
@@ -128,74 +109,70 @@ export function useSpeechSynthesis() {
     return voice;
   }, [voices]);
 
-  // Set up synthetic speech audio analysis
+  // Set up synthetic speech audio analysis - simplified version
   const setupSpeechAnalysis = useCallback(() => {
-    const { audioContext, analyser } = audioAnalysisData;
-    if (!audioContext || !analyser) {
-      console.error('Audio analysis not available');
-      return;
-    }
-    
-    // In a real-world scenario, we would connect the speech synthesis to the audio analyzer
-    // Since we can't directly access the audio stream from Speech Synthesis,
-    // we'll simulate the audio analysis using oscillator or noise generator
-    
-    // Simulate speech audio with a combination of oscillators
-    const oscillator1 = audioContext.createOscillator();
-    const oscillator2 = audioContext.createOscillator();
-    const noiseGenerator = audioContext.createGain();
-    
-    oscillator1.frequency.value = 220; // Base frequency
-    oscillator2.frequency.value = 440; // Harmonics
-    
-    // Create a gain node to control volume
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.5;
-    
-    // Connect everything
-    oscillator1.connect(gainNode);
-    oscillator2.connect(gainNode);
-    gainNode.connect(analyser);
-    analyser.connect(audioContext.destination);
-    
-    // Start oscillators
-    oscillator1.start();
-    oscillator2.start();
-    
-    // Simulate speech pattern by modulating the gain
-    const modulateGain = () => {
-      // Random modulation to simulate speech
-      const targetGain = Math.random() * 0.5 + 0.1;
-      gainNode.gain.linearRampToValueAtTime(
-        targetGain, 
-        audioContext.currentTime + 0.1
-      );
+    // Create a random pattern generator for the mouth animation
+    const generateRandomVolumePattern = () => {
+      // Target volumes for simulation (min, max)
+      const minVolume = 0.2;
+      const maxVolume = 0.8;
       
-      if (isSpeaking) {
-        setTimeout(modulateGain, 100 + Math.random() * 200);
+      // Generate a sequence of random volume changes
+      const patternLength = 30; // number of steps to generate
+      const pattern: number[] = [];
+      
+      // Start with mid volume
+      let currentVolume = (minVolume + maxVolume) / 2;
+      
+      // Generate a pattern of volumes
+      for (let i = 0; i < patternLength; i++) {
+        // Add some randomness to the volume
+        const randomChange = (Math.random() * 0.4) - 0.2; // Random value between -0.2 and 0.2
+        currentVolume += randomChange;
+        
+        // Keep volume within bounds
+        currentVolume = Math.max(minVolume, Math.min(maxVolume, currentVolume));
+        
+        pattern.push(currentVolume);
       }
+      
+      return pattern;
     };
     
-    modulateGain();
+    // Generate a random pattern
+    const volumePattern = generateRandomVolumePattern();
+    let patternIndex = 0;
     
-    // Start analyzing
-    rafIdRef.current = requestAnimationFrame(updateVolume);
+    // Simulate playing audio with the pattern
+    const interval = setInterval(() => {
+      if (!isSpeaking) {
+        clearInterval(interval);
+        return;
+      }
+      
+      // Get next volume from pattern and loop
+      const nextVolume = volumePattern[patternIndex % volumePattern.length];
+      patternIndex++;
+      
+      // Update the audio analysis state
+      setAudioAnalysisData(prev => ({
+        ...prev,
+        volume: nextVolume
+      }));
+    }, 150); // Update every 150ms for a natural speech rhythm
     
     // Return cleanup function
     return () => {
-      oscillator1.stop();
-      oscillator2.stop();
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
+      clearInterval(interval);
     };
-  }, [audioAnalysisData, isSpeaking, updateVolume]);
+  }, [isSpeaking]);
 
   // Effect to handle audio analysis during speech
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     
     if (isSpeaking) {
+      // Only set up analysis when speaking
       cleanup = setupSpeechAnalysis();
     } else {
       // Reset volume when not speaking
