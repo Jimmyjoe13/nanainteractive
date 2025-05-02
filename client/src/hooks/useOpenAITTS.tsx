@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import OpenAI from 'openai';
 
 interface AudioAnalysisData {
   volume: number;
@@ -13,7 +12,7 @@ interface TTSOptions {
   speed: number;
 }
 
-// Hook pour la synthèse vocale via l'API OpenAI
+// Hook pour la synthèse vocale via notre endpoint qui utilise l'API OpenAI
 export function useOpenAITTS() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -27,12 +26,6 @@ export function useOpenAITTS() {
   // Références pour les éléments audio et les intervalles
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<number | null>(null);
-  
-  // Créer une instance d'OpenAI avec l'API key
-  const openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
-    dangerouslyAllowBrowser: true // Uniquement pour les tests, à éviter en production
-  });
 
   // Nettoyer les ressources quand le composant est démonté
   useEffect(() => {
@@ -84,8 +77,8 @@ export function useOpenAITTS() {
     });
   }, []);
 
-  // Fonction pour générer et jouer l'audio via l'API OpenAI
-  const speak = useCallback(async (text: string, options: TTSOptions = {}) => {
+  // Fonction pour générer et jouer l'audio via notre endpoint API qui utilise OpenAI TTS
+  const speak = useCallback(async (text: string, options: Partial<TTSOptions> = {}) => {
     if (!text.trim()) return;
     
     try {
@@ -108,18 +101,30 @@ export function useOpenAITTS() {
       // Démarrer la simulation pour l'animation de la bouche pendant le chargement
       startVolumeSimulation();
       
-      // Appeler l'API OpenAI pour la synthèse vocale
+      // Appeler notre API pour la synthèse vocale
       console.log(`Génération de l'audio avec OpenAI TTS (voix: ${finalOptions.voice})...`);
       
-      const mp3Response = await openai.audio.speech.create({
-        model: finalOptions.model,
-        voice: finalOptions.voice,
-        input: text,
-        speed: finalOptions.speed
+      // Appel à notre API backend
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text,
+          voice: finalOptions.voice,
+          model: finalOptions.model,
+          speed: finalOptions.speed
+        })
       });
       
-      // Convertir la réponse en blob audio
-      const mp3Blob = await mp3Response.blob();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la génération audio');
+      }
+      
+      // Récupérer le blob audio depuis la réponse
+      const mp3Blob = await response.blob();
       const audioObjectUrl = URL.createObjectURL(mp3Blob);
       
       // Enregistrer l'URL pour le nettoyage ultérieur

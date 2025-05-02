@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useOpenAITTS } from "@/hooks/useOpenAITTS";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Square, Volume2, VolumeX } from "lucide-react";
@@ -23,11 +24,19 @@ export default function Home() {
     }
   ]);
   
-  // Text-to-speech synthesis
+  // Text-to-speech avec OpenAI (voix Onyx)
   const { 
-    speak, 
-    isSpeaking, 
-    stopSpeaking, 
+    speak: speakWithOpenAI, 
+    stopPlayback: stopOpenAISpeech,
+    isPlaying: isOpenAISpeaking,
+    currentVolume: openAIVolume
+  } = useOpenAITTS();
+  
+  // Synthèse vocale de secours (utilisation du navigateur si l'API OpenAI ne fonctionne pas)
+  const { 
+    speak: speakWithBrowser, 
+    isSpeaking: isBrowserSpeaking, 
+    stopSpeaking: stopBrowserSpeech, 
     isSpeechSupported
   } = useSpeechSynthesis();
   
@@ -38,8 +47,37 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<number | null>(null);
   
+  // État combiné de la synthèse vocale (OpenAI ou navigateur)
+  const isSpeaking = isOpenAISpeaking || isBrowserSpeaking;
+  
+  // Fonction pour arrêter toute synthèse vocale en cours
+  const stopSpeaking = () => {
+    stopOpenAISpeech();
+    stopBrowserSpeech();
+  };
+  
+  // Fonction pour parler avec la meilleure voix disponible (OpenAI en priorité)
+  const speak = async (text: string) => {
+    try {
+      // On arrête d'abord toute synthèse vocale en cours
+      stopSpeaking();
+      
+      // On essaie d'utiliser l'API OpenAI pour une voix de qualité supérieure
+      await speakWithOpenAI(text, { voice: 'onyx', model: 'tts-1-hd' });
+    } catch (error) {
+      console.error('Erreur avec la synthèse OpenAI, utilisation du navigateur:', error);
+      
+      // En cas d'échec, on utilise la synthèse vocale du navigateur
+      if (isSpeechSupported) {
+        speakWithBrowser(text);
+      }
+    }
+  };
+  
   // Get the current volume for mouth animation
-  const currentVolume = isSimulating ? simulationVolume : (isSpeaking ? 0.5 : 0);
+  const currentVolume = isSimulating 
+    ? simulationVolume 
+    : (isOpenAISpeaking ? openAIVolume : (isBrowserSpeaking ? 0.5 : 0));
   
   // Update isTalking when speaking status changes
   useEffect(() => {
