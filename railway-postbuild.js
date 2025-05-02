@@ -7,17 +7,21 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
-// Fonction pour parcourir récursivement un répertoire et appliquer une fonction sur chaque fichier
+/**
+ * Parcourt un répertoire récursivement et applique une fonction à chaque fichier
+ */
 function traverseDirectory(dir, fileCallback) {
-  const files = fs.readdirSync(dir);
+  if (!fs.existsSync(dir)) {
+    return;
+  }
   
-  for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
     
-    if (stat.isDirectory()) {
+    if (entry.isDirectory()) {
       traverseDirectory(fullPath, fileCallback);
     } else {
       fileCallback(fullPath);
@@ -25,119 +29,106 @@ function traverseDirectory(dir, fileCallback) {
   }
 }
 
-// Fonction pour corriger les références à import.meta.dirname
+/**
+ * Corrige les problèmes liés à import.meta.dirname dans le code transpilé
+ */
 function fixImportMetaDirname(filePath) {
-  if (!filePath.endsWith('.js')) return;
+  if (!filePath.endsWith('.js')) {
+    return;
+  }
   
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
+  let content = fs.readFileSync(filePath, 'utf8');
+  
+  // Vérifier si le fichier contient des références problématiques
+  if (content.includes('import.meta.dirname') || content.includes('import.meta.url')) {
+    // Remplacer les problèmes connus
+    content = content
+      .replace(/import\.meta\.dirname/g, 'process.cwd()')
+      .replace(/new URL\('\.', import\.meta\.url\)\.pathname/g, 'process.cwd()');
     
-    // Vérifier si le fichier contient des références problématiques
-    if (content.includes('import.meta.dirname') || content.includes('paths[0]')) {
-      console.log(`Fixing file: ${filePath}`);
-      
-      // Remplacer les références à import.meta.dirname par process.cwd()
-      let newContent = content.replace(/import\.meta\.dirname/g, 'process.cwd()');
-      
-      // Corriger les problèmes de paths[0] undefined
-      newContent = newContent.replace(
-        /path\.resolve\(([^,]+)(?:,\s*\.\.)?/g, 
-        'path.resolve(process.cwd()'
-      );
-      
-      fs.writeFileSync(filePath, newContent, 'utf8');
-    }
-  } catch (error) {
-    console.error(`Error processing file ${filePath}:`, error);
+    // Écrire le contenu modifié
+    fs.writeFileSync(filePath, content);
+    console.log(`✅ Corrigé: ${filePath}`);
   }
 }
 
-// Fonction pour créer le répertoire public et y copier les fichiers statiques
+/**
+ * Configure le répertoire public pour la distribution
+ */
 function setupPublicDirectory() {
-  const distDir = path.join(process.cwd(), 'dist');
-  const publicDir = path.join(distDir, 'public');
-  const clientDistDir = path.join(process.cwd(), 'client', 'dist');
-  
   // Créer le répertoire public s'il n'existe pas
+  const publicDir = path.join(process.cwd(), 'dist', 'public');
   if (!fs.existsSync(publicDir)) {
-    console.log('Creating public directory...');
     fs.mkdirSync(publicDir, { recursive: true });
+    console.log(`📁 Répertoire créé: ${publicDir}`);
   }
   
-  // Copier les fichiers statiques si available
+  // Copier les fichiers statiques du client vers le répertoire public
+  const clientDistDir = path.join(process.cwd(), 'client', 'dist');
+  
   if (fs.existsSync(clientDistDir)) {
-    console.log('Copying static files from client/dist to dist/public...');
-    try {
-      execSync(`cp -R ${clientDistDir}/* ${publicDir}/`, { stdio: 'inherit' });
-    } catch (error) {
-      console.error('Error copying static files:', error);
+    traverseDirectory(clientDistDir, (filePath) => {
+      const relativePath = path.relative(clientDistDir, filePath);
+      const destPath = path.join(publicDir, relativePath);
       
-      // Alternative manual copy if cp command fails
-      traverseDirectory(clientDistDir, (filePath) => {
-        const relativePath = path.relative(clientDistDir, filePath);
-        const destPath = path.join(publicDir, relativePath);
-        
-        // Create directory structure if needed
-        const destDir = path.dirname(destPath);
-        if (!fs.existsSync(destDir)) {
-          fs.mkdirSync(destDir, { recursive: true });
-        }
-        
-        // Copy file
-        fs.copyFileSync(filePath, destPath);
-      });
-    }
-  } else {
-    console.log('Warning: client/dist directory not found. No static files will be copied.');
+      // Créer le répertoire parent si nécessaire
+      const parentDir = path.dirname(destPath);
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+      
+      // Copier le fichier
+      fs.copyFileSync(filePath, destPath);
+    });
     
-    // Create a simple index.html as fallback
-    const indexHtml = `
-<!DOCTYPE html>
+    console.log('📋 Fichiers statiques copiés avec succès');
+  } else {
+    console.warn('⚠️ Répertoire client/dist non trouvé');
+    
+    // Créer un fichier index.html par défaut
+    const indexPath = path.join(publicDir, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      const defaultHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NanaInteractive API</title>
+  <title>NANA API</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
-    h1 { color: #333; }
-    .card { background-color: #f8f9fa; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .card { background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; }
     .success { color: green; }
   </style>
 </head>
 <body>
-  <h1>NanaInteractive API</h1>
+  <h1>NANA API Server</h1>
   <div class="card">
-    <p class="success">✓ Server is running</p>
-    <p>The API server is running successfully. This is the API backend.</p>
-    <p>Health check endpoint: <a href="/api/health">/api/health</a></p>
+    <p class="success">✓ Serveur en ligne</p>
+    <p>Le serveur API NANA est en ligne.</p>
+    <p><a href="/api/health">Vérification de santé</a></p>
   </div>
 </body>
-</html>
-    `;
-    
-    fs.writeFileSync(path.join(publicDir, 'index.html'), indexHtml, 'utf8');
+</html>`;
+      
+      fs.writeFileSync(indexPath, defaultHtml);
+      console.log('📝 Fichier index.html par défaut créé');
+    }
   }
 }
 
-// Fonction principale
+/**
+ * Fonction principale
+ */
 function main() {
-  console.log('Running post-build fixes...');
+  console.log('🔧 Exécution des corrections post-build...');
   
-  const distDir = path.join(process.cwd(), 'dist');
+  // Corriger les problèmes dans les fichiers transpilés
+  traverseDirectory('dist', fixImportMetaDirname);
   
-  if (!fs.existsSync(distDir)) {
-    console.error('Error: dist directory not found. Build may have failed.');
-    process.exit(1);
-  }
-  
-  // Parcourir tous les fichiers JS dans le répertoire dist et les corriger
-  traverseDirectory(distDir, fixImportMetaDirname);
-  
-  // Configurer le répertoire public pour les fichiers statiques
+  // Configurer le répertoire public
   setupPublicDirectory();
   
-  console.log('Post-build fixes completed successfully!');
+  console.log('✅ Corrections terminées avec succès.');
 }
 
+// Exécuter le script
 main();

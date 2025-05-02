@@ -5,31 +5,38 @@
  * Exécute l'application en production après avoir appliqué les adaptations nécessaires
  */
 
-const { execSync } = require('child_process');
-const path = require('path');
+console.log('🚀 Démarrage de l\'application NANA sur Railway...');
 
-// Rendre le script d'adaptation exécutable
-try {
-  execSync('chmod +x ./railway-build.js');
-  console.log('✅ Made adaptation script executable');
-} catch (error) {
-  console.warn('⚠️ Could not make adaptation script executable:', error.message);
+// Définir NODE_ENV
+process.env.NODE_ENV = 'production';
+
+// Définir le port d'écoute (utiliser celui fourni par Railway ou 5000 par défaut)
+if (!process.env.PORT) {
+  console.log('⚠️ Variable PORT non définie, utilisation du port 5000 par défaut');
+  process.env.PORT = '5000';
 }
 
-// Exécuter le script d'adaptation
-console.log('🔧 Running build adaptation for Railway...');
-try {
-  execSync('node ./railway-build.js', { stdio: 'inherit' });
-} catch (error) {
-  console.error('❌ Build adaptation failed:', error.message);
+// Vérifier les variables d'environnement essentielles
+const requiredVars = ['DATABASE_URL'];
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Variables d\'environnement manquantes:');
+  missingVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('Assurez-vous de configurer ces variables dans votre projet Railway');
   process.exit(1);
 }
+
+// Journaliser les informations système
+console.log('==== Informations système ====');
+console.log(`Node.js: ${process.version}`);
+console.log(`OS: ${process.platform} ${process.arch}`);
+console.log(`Répertoire: ${process.cwd()}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`PORT: ${process.env.PORT}`);
+console.log('============================');
 
 // Démarrer l'application
-console.log('🚀 Starting application...');
-try {
-  execSync('NODE_ENV=production node dist/index.js', { stdio: 'inherit' });
-} catch (error) {
-  console.error('❌ Application crashed:', error.message);
-  process.exit(1);
-}
+require('../dist/index.js');

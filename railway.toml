@@ -1,13 +1,11 @@
-# Configuration Railway pour NanaInteractive
-
+# Configuration Railway
 [build]
-builder = "dockerfile"
-watchPaths = ["client/src/**", "server/**", "shared/**"]
+builder = "DOCKERFILE"
+dockerfile = "Dockerfile"
 
 [deploy]
-startCommand = "node dist/index.js"
+numReplicas = 1
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
-numReplicas = 1
-sleepApplication = false
+restartPolicyMaxRetries = 10

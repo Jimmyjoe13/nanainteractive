@@ -8,52 +8,48 @@
 const fs = require('fs');
 const path = require('path');
 
-// Fonction pour remplacer import.meta.dirname par une alternative qui fonctionnera en production
+/**
+ * Corrige les références import.meta.dirname dans les fichiers JS transpilés
+ */
 function fixImportMetaDirname() {
-  // Trouver tous les fichiers JS dans le répertoire dist
-  const distDir = path.join(process.cwd(), 'dist');
-  const files = findJsFiles(distDir);
+  console.log('🔧 Correction des références import.meta.dirname...');
   
-  console.log(`Found ${files.length} JS files to check for import.meta.dirname references`);
+  // Trouve tous les fichiers JS dans le répertoire dist
+  const jsFiles = findJsFiles('dist');
+  let fixedFiles = 0;
   
-  let fixedCount = 0;
-  
-  for (const file of files) {
-    try {
-      const content = fs.readFileSync(file, 'utf8');
+  for (const file of jsFiles) {
+    const content = fs.readFileSync(file, 'utf8');
+    
+    // Remplace les références import.meta.dirname par __dirname
+    if (content.includes('import.meta.dirname') || content.includes('import.meta.url')) {
+      const newContent = content
+        .replace(/import\.meta\.dirname/g, 'process.cwd()')
+        .replace(/new URL\(.*?import\.meta\.url\)/g, "process.cwd()");
       
-      // Vérifier si le fichier contient des références à import.meta.dirname
-      if (content.includes('import.meta.dirname')) {
-        console.log(`Modifying ${file} to fix import.meta.dirname references...`);
-        
-        // Remplacer les références à import.meta.dirname par process.cwd()
-        const updatedContent = content.replace(/import\.meta\.dirname/g, 'process.cwd()');
-        
-        fs.writeFileSync(file, updatedContent, 'utf8');
-        fixedCount++;
-      }
-    } catch (error) {
-      console.warn(`⚠️ Error processing file ${file}:`, error.message);
+      fs.writeFileSync(file, newContent);
+      fixedFiles++;
+      console.log(`✅ Corrigé: ${file}`);
     }
   }
   
-  console.log(`✅ Successfully fixed import.meta.dirname references in ${fixedCount} files`);
+  console.log(`🔧 ${fixedFiles} fichiers corrigés`);
 }
 
-// Fonction pour trouver récursivement tous les fichiers JS dans un répertoire
+/**
+ * Recherche récursivement tous les fichiers JS dans un répertoire
+ */
 function findJsFiles(dir) {
   const files = [];
   
-  const items = fs.readdirSync(dir, { withFileTypes: true });
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
   
-  for (const item of items) {
-    const fullPath = path.join(dir, item.name);
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
     
-    if (item.isDirectory()) {
-      // Récursion pour les sous-répertoires
+    if (entry.isDirectory()) {
       files.push(...findJsFiles(fullPath));
-    } else if (item.isFile() && item.name.endsWith('.js')) {
-      // Ajouter les fichiers JS
+    } else if (entry.name.endsWith('.js')) {
       files.push(fullPath);
     }
   }
@@ -61,72 +57,117 @@ function findJsFiles(dir) {
   return files;
 }
 
-// Vérifier et créer les répertoires nécessaires
+/**
+ * Assure l'existence des répertoires nécessaires
+ */
 function ensureDirectories() {
-  const publicDir = path.join(process.cwd(), 'dist', 'public');
+  console.log('📁 Vérification des répertoires...');
   
-  if (!fs.existsSync(publicDir)) {
-    console.log(`Creating public directory at ${publicDir}...`);
-    fs.mkdirSync(publicDir, { recursive: true });
-    console.log('✅ Created public directory');
+  const directories = [
+    'dist',
+    'dist/public'
+  ];
+  
+  for (const dir of directories) {
+    if (!fs.existsSync(dir)) {
+      console.log(`📁 Création du répertoire: ${dir}`);
+      fs.mkdirSync(dir, { recursive: true });
+    }
   }
-  
-  // Copier les fichiers client/dist vers dist/public pour servir les fichiers statiques
-  copyClientDistToPublic();
 }
 
-// Copier les fichiers du build client vers le répertoire public pour la production
+/**
+ * Copie les fichiers statiques du client vers le répertoire public
+ */
 function copyClientDistToPublic() {
+  console.log('📋 Copie des fichiers statiques du client...');
+  
   const clientDistDir = path.join(process.cwd(), 'client', 'dist');
   const publicDir = path.join(process.cwd(), 'dist', 'public');
   
   if (fs.existsSync(clientDistDir)) {
-    console.log(`Copying client build files from ${clientDistDir} to ${publicDir}...`);
-    
-    // Copier récursivement tous les fichiers
     copyDirectoryRecursive(clientDistDir, publicDir);
-    
-    console.log('✅ Successfully copied client build files to public directory');
+    console.log('✅ Fichiers statiques copiés avec succès');
   } else {
-    console.warn(`⚠️ Client build directory ${clientDistDir} not found. Make sure the client was built correctly.`);
+    console.warn('⚠️ Répertoire client/dist non trouvé. Aucun fichier statique n\'a été copié.');
+    
+    // Création d'un fichier index.html par défaut
+    const indexPath = path.join(publicDir, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      console.log('📝 Création d\'un fichier index.html par défaut');
+      
+      const defaultHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NANA API</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { color: #333; }
+    .card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h1>NANA API Server</h1>
+  <div class="card">
+    <p class="success">✓ Serveur en ligne</p>
+    <p>Le serveur API NANA est en ligne.</p>
+    <p><a href="/api/health">Vérification de santé</a></p>
+  </div>
+</body>
+</html>`;
+      
+      fs.writeFileSync(indexPath, defaultHtml);
+    }
   }
 }
 
-// Fonction utilitaire pour copier un répertoire récursivement
+/**
+ * Copie récursivement un répertoire vers une destination
+ */
 function copyDirectoryRecursive(sourceDir, destDir) {
   if (!fs.existsSync(destDir)) {
     fs.mkdirSync(destDir, { recursive: true });
   }
   
-  const items = fs.readdirSync(sourceDir, { withFileTypes: true });
+  const entries = fs.readdirSync(sourceDir, { withFileTypes: true });
   
-  for (const item of items) {
-    const srcPath = path.join(sourceDir, item.name);
-    const destPath = path.join(destDir, item.name);
+  for (const entry of entries) {
+    const srcPath = path.join(sourceDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
     
-    if (item.isDirectory()) {
-      // Créer le sous-répertoire et copier son contenu
+    if (entry.isDirectory()) {
       copyDirectoryRecursive(srcPath, destPath);
     } else {
-      // Copier le fichier
       fs.copyFileSync(srcPath, destPath);
     }
   }
 }
 
-// Fonction principale
+/**
+ * Fonction principale
+ */
 function main() {
-  console.log('📦 Running Railway build adapter...');
+  console.log('🚀 Préparation des fichiers pour le déploiement sur Railway...');
   
-  try {
-    fixImportMetaDirname();
-    ensureDirectories();
-    
-    console.log('🚀 Build adaptation for Railway completed successfully!');
-  } catch (error) {
-    console.error('❌ Error during build adaptation:', error);
-    process.exit(1);
-  }
+  ensureDirectories();
+  fixImportMetaDirname();
+  copyClientDistToPublic();
+  
+  console.log('✅ Préparation terminée. L\'application est prête à être démarrée.');
 }
 
+// Exécuter le script
 main();

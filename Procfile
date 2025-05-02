@@ -1,1 +1,2 @@
-web: node railway-start.js
+# Procfile pour Railway
+web: npm run build && node ./railway-start.js
