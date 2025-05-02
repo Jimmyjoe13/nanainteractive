@@ -91,19 +91,39 @@ export function useSpeechSynthesis() {
 
   // Find the best French female voice
   const getBestVoice = useCallback((text: string) => {
+    // Log available voices for debugging
+    if (voices.length > 0) {
+      console.log('Voix disponibles:', voices.map(v => `${v.name} (${v.lang})`));
+    } else {
+      console.warn('Aucune voix disponible!');
+    }
+  
     // First try to find a French female voice
     let voice = voices.find(v => 
       v.lang.includes('fr') && 
-      v.name.toLowerCase().includes('female'));
+      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('femme')));
     
     // If no French female voice, try any French voice
     if (!voice) {
       voice = voices.find(v => v.lang.includes('fr'));
     }
     
+    // If still no voice, try a voice with a French name
+    if (!voice) {
+      voice = voices.find(v => 
+        v.name.toLowerCase().includes('français') || 
+        v.name.toLowerCase().includes('french'));
+    }
+    
     // If no French voice at all, use default
     if (!voice && voices.length > 0) {
       voice = voices[0];
+    }
+    
+    if (voice) {
+      console.log('Voix sélectionnée:', voice.name, voice.lang);
+    } else {
+      console.warn('Aucune voix trouvée, synthèse vocale peut-être non fonctionnelle');
     }
     
     return voice;

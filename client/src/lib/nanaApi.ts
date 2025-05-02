@@ -16,48 +16,12 @@ interface NanaResponse {
  */
 export async function sendMessageToNana(message: string): Promise<NanaResponse> {
   const webhookUrl = 'https://n8n-production-c3cb.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
-  const audioWebhookUrl = 'https://n8n-production-c3cb.up.railway.app/webhook-binary/94838ad8-9e79-484f-c817-7e445a7b2a0f';
   
   try {
     console.log('Sending message to NANA webhook:', message);
     
-    // Essayer d'abord de récupérer directement la réponse audio
-    console.log('Tentative de récupération directe du fichier audio binaire...');
-    let audioResponse;
-    
-    try {
-      audioResponse = await fetch(audioWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg, audio/mp3, audio/*'
-        },
-        body: JSON.stringify({ message })
-      });
-      
-      if (audioResponse.ok) {
-        const contentType = audioResponse.headers.get('Content-Type');
-        if (contentType && contentType.includes('audio')) {
-          // On a récupéré un fichier audio!
-          console.log('Fichier audio binaire récupéré avec succès!');
-          const audioBlob = await audioResponse.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
-          
-          return {
-            audioUrl,
-            mimeType: contentType,
-            fileType: 'audio',
-            fileExtension: 'mp3',
-            fileName: 'nana_response.mp3',
-          };
-        }
-      }
-    } catch (audioError) {
-      console.warn('Impossible de récupérer l\'audio directement:', audioError);
-    }
-    
-    // Si la récupération audio a échoué, on revient à la méthode standard
-    console.log('Fallback: récupération de la réponse texte standard');
+    // Pour l'instant nous n'avons pas directement accès aux données binaires
+    // Nous allons donc directement faire la requête standard
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
