@@ -1,29 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
+import { Send } from "lucide-react";
 
 export default function Home() {
-  // State
-  const [isListening, setIsListening] = useState(false);
+  // State for UI
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
   const [userMessage, setUserMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  // Custom hooks for speech recognition
-  const { 
-    startListening, 
-    stopListening, 
-    transcript, 
-    isListeningSupported 
-  } = useSpeechRecognition('fr-FR');
+  // Chat messages state
+  const [messages, setMessages] = useState<{ text: string; isUser: boolean; timestamp: Date }[]>([
+    { 
+      text: "Bonjour ! Je suis NANA, l'assistant IA de Nana Intelligence. Comment puis-je vous aider aujourd'hui ?", 
+      isUser: false, 
+      timestamp: new Date() 
+    }
+  ]);
   
-  // Text-to-speech synthesis (fallback)
+  // Text-to-speech synthesis
   const { 
     speak, 
     isSpeaking, 
@@ -31,7 +31,7 @@ export default function Home() {
     isSpeechSupported
   } = useSpeechSynthesis();
   
-  // État pour la simulation audio et le lecteur audio
+  // Audio simulation for mouth animation
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationVolume, setSimulationVolume] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -41,54 +41,17 @@ export default function Home() {
   // Get the current volume for mouth animation
   const currentVolume = isSimulating ? simulationVolume : (isSpeaking ? 0.5 : 0);
   
-  // Check for transcript changes
-  useEffect(() => {
-    if (transcript && isListening) {
-      processUserInput(transcript);
-    }
-  }, [transcript]);
-  
-  // Update isTalking when speaking status changes from TTS
+  // Update isTalking when speaking status changes
   useEffect(() => {
     setIsTalking(isSpeaking || isSimulating);
   }, [isSpeaking, isSimulating]);
   
-  // Simulation d'audio pour animer la bouche quand on a un fichier audio
-  const simulateAudio = (duration = 5000) => {
-    // Nettoyage de toute simulation précédente
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    console.log("Démarrage de la simulation audio");
-    
-    // Attendre un peu pour simuler la latence
-    setTimeout(() => {
-      setIsSimulating(true);
-      
-      // Générer des valeurs de volume aléatoires pour animer la bouche
-      intervalRef.current = window.setInterval(() => {
-        const minVolume = 0.2;
-        const maxVolume = 0.8;
-        const randomVolume = Math.random() * (maxVolume - minVolume) + minVolume;
-        setSimulationVolume(randomVolume);
-      }, 150);
-      
-      // Arrêter après la durée spécifiée
-      setTimeout(() => {
-        setIsSimulating(false);
-        setSimulationVolume(0);
-        
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      }, duration);
-    }, 300);
-  };
+  // Auto-scroll to the latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
   
-  // Nettoyer les intervalles lors du démontage
+  // Clean up intervals and object URLs on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
@@ -96,14 +59,13 @@ export default function Home() {
         intervalRef.current = null;
       }
       
-      // Nettoyer les URL d'objet
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
       }
     };
   }, [audioUrl]);
   
-  // Configurer les écouteurs d'événements pour l'élément audio
+  // Set up audio element event listeners
   useEffect(() => {
     if (!audioRef.current) return;
     
@@ -135,11 +97,9 @@ export default function Home() {
       });
     };
     
-    // Ajouter les écouteurs
     audioRef.current.addEventListener('ended', handleAudioEnd);
     audioRef.current.addEventListener('error', handleAudioError);
     
-    // Nettoyer
     return () => {
       if (audioRef.current) {
         audioRef.current.removeEventListener('ended', handleAudioEnd);
@@ -147,48 +107,53 @@ export default function Home() {
       }
     };
   }, [toast]);
-
-  // Handle toggle listening
-  const handleToggleListen = () => {
-    if (isProcessing) return;
-    
-    if (isListening) {
-      setIsListening(false);
-      stopListening();
-      return;
+  
+  // Simulate audio for mouth animation
+  const simulateAudio = (duration = 5000) => {
+    // Clean up any existing simulation
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
     
-    // Check for browser support
-    if (!isListeningSupported) {
-      toast({
-        title: "Microphone non supporté",
-        description: "Votre navigateur ne supporte pas la reconnaissance vocale.",
-        variant: "destructive"
-      });
-      return;
-    }
+    console.log("Démarrage de la simulation audio");
     
-    setIsListening(true);
-    startListening();
+    // Add a small delay to simulate latency
+    setTimeout(() => {
+      setIsSimulating(true);
+      
+      // Generate random volume values to animate the mouth
+      intervalRef.current = window.setInterval(() => {
+        const minVolume = 0.2;
+        const maxVolume = 0.8;
+        const randomVolume = Math.random() * (maxVolume - minVolume) + minVolume;
+        setSimulationVolume(randomVolume);
+      }, 150);
+      
+      // Stop after specified duration
+      setTimeout(() => {
+        setIsSimulating(false);
+        setSimulationVolume(0);
+        
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }, duration);
+    }, 300);
   };
   
-  // Process user input (either from voice or text)
-  const processUserInput = async (text: string) => {
+  // Process user input and handle API response
+  const processUserMessage = async (text: string) => {
     if (!text.trim()) return;
     
     try {
-      // Stop any ongoing interactions
-      if (isListening) {
-        setIsListening(false);
-        stopListening();
-      }
-      
+      // Stop any ongoing speech or audio
       if (isSpeaking) {
         stopSpeaking();
       }
       
       if (isSimulating) {
-        // Arrêter la simulation
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
@@ -197,131 +162,67 @@ export default function Home() {
         setSimulationVolume(0);
       }
       
+      // Add user message to chat
+      setMessages(prev => [...prev, { 
+        text, 
+        isUser: true, 
+        timestamp: new Date() 
+      }]);
+      
+      // Set processing state
       setIsProcessing(true);
       
-      // Clear input field if this came from the text input
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-      
-      // Log the user's message
       console.log("Envoi du message au webhook n8n:", text);
       
       // Send to API
       const response = await sendMessageToNana(text);
       
-      // Log the response we get from the webhook
       console.log("Réponse reçue du webhook n8n:", response);
       
-      console.log("Réponse complète reçue:", response);
+      // Extract response text
+      let responseText = "";
       
-      // Cas 1: Si la réponse est un string (ancienne implémentation)
+      // Case 1: If response is a string
       if (typeof response === 'string') {
-        console.log("Réponse est un string, utilisation de la synthèse vocale:", response);
+        responseText = response;
         if (isSpeechSupported) {
-          speak(response);
-        } else {
-          console.warn("Synthèse vocale non supportée par ce navigateur");
-          toast({
-            title: "Message reçu",
-            description: response,
-            variant: "default"
-          });
+          speak(responseText);
         }
-        return;
       }
-      
-      // À partir d'ici on traite les objets de réponse
-      
-      // Cas 2: Si on a une URL audio
-      if (response?.audioUrl) {
-        console.log("Fichier audio réel reçu:", response.audioUrl);
-        
-        // Nettoyer l'ancienne URL si elle existe
-        if (audioUrl) {
-          URL.revokeObjectURL(audioUrl);
-        }
-        
-        // Enregistrer l'URL pour afficher le lecteur audio
-        setAudioUrl(response.audioUrl);
-        
-        // Jouer directement l'audio
-        if (audioRef.current) {
-          console.log("Lecture du fichier audio via l'élément audio");
-          audioRef.current.src = response.audioUrl;
-          audioRef.current.load();
-          
-          // On met en place les événements pour la synchronisation de la bouche
-          const playPromise = audioRef.current.play();
-          
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                console.log("Lecture audio démarrée avec succès");
-                setIsSimulating(true);
-                // Simuler les mouvements de bouche pendant la lecture
-                intervalRef.current = window.setInterval(() => {
-                  const minVolume = 0.2;
-                  const maxVolume = 0.8;
-                  const randomVolume = Math.random() * (maxVolume - minVolume) + minVolume;
-                  setSimulationVolume(randomVolume);
-                }, 150);
-              })
-              .catch(error => {
-                console.error("Erreur lors de la lecture audio:", error);
-                // En cas d'échec, on utilise la simulation
-                simulateAudio(6000);
-              });
-          }
-        } else {
-          // Fallback si l'élément audio n'est pas disponible
-          console.warn("Élément audio non disponible, utilisation de la simulation");
-          simulateAudio(6000);
-        }
-        
-        toast({
-          title: "Audio généré",
-          description: "Écoute de la réponse...",
-          variant: "default"
-        });
-      }
-      // Cas 3: Si on a du texte
+      // Case 2: If response contains text
       else if (response?.text) {
-        console.log("Utilisation de la synthèse vocale:", response.text);
+        responseText = response.text;
         if (isSpeechSupported) {
-          speak(response.text);
-        } else {
-          console.warn("Synthèse vocale non supportée par ce navigateur");
-          toast({
-            title: "Message reçu",
-            description: response.text,
-            variant: "default"
-          });
+          speak(responseText);
         }
       }
-      // Cas 4: Si on a un fichier audio mais pas d'URL, on simule la parole
+      // Case 3: If we have an audio file but no text
       else if (response?.mimeType && response.mimeType.includes('audio')) {
-        console.log("Simulation de parole pour un fichier audio non accessible");
-        // Simuler la parole
+        responseText = "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.";
         simulateAudio(5000);
-        
-        toast({
-          title: "Information",
-          description: "Un fichier audio a été généré mais n'est pas accessible directement.",
-          variant: "default"
-        });
       }
-      // Cas 5: Aucune information exploitable
+      // Case 4: No usable information
       else {
-        console.error("Aucune réponse valide reçue:", response);
-        toast({
-          title: "Erreur de format",
-          description: "La réponse du serveur n'est pas dans un format utilisable.",
-          variant: "destructive"
-        });
+        responseText = "Je rencontre des difficultés techniques. Pourriez-vous reformuler votre question ?";
       }
+      
+      // Add AI response to chat
+      setMessages(prev => [...prev, { 
+        text: responseText, 
+        isUser: false, 
+        timestamp: new Date() 
+      }]);
+      
     } catch (error) {
       console.error('Error processing input:', error);
+      
+      // Add error message to chat
+      setMessages(prev => [...prev, { 
+        text: "Je rencontre des difficultés techniques. Merci de réessayer dans un instant.", 
+        isUser: false, 
+        timestamp: new Date() 
+      }]);
+      
       toast({
         title: "Erreur de communication",
         description: "Impossible de communiquer avec NANA pour le moment.",
@@ -332,45 +233,44 @@ export default function Home() {
     }
   };
   
-  // Handle form submission for text input
+  // Form submission handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userMessage.trim()) return;
+    if (!userMessage.trim() || isProcessing) return;
     
-    // Stop any ongoing audio or speech
-    if (isSpeaking) {
-      stopSpeaking();
-    }
-    
-    if (isSimulating) {
-      // Arrêter la simulation
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setIsSimulating(false);
-      setSimulationVolume(0);
-    }
-    
-    processUserInput(userMessage);
+    processUserMessage(userMessage);
     setUserMessage("");
   };
 
   return (
-    <div className="min-h-screen nana-container">
-      <main className="h-full flex flex-col items-center justify-center py-8">
-        {/* Nana Face */}
-        <div className="flex-grow flex items-center justify-center w-full">
-          <NanaFace 
-            isTalking={isTalking} 
-            isListening={isListening} 
-            isProcessing={isProcessing}
-            currentVolume={currentVolume}
-          />
+    <div className="nana-container">
+      {/* Left side - Nana face */}
+      <div className="nana-face-container">
+        <NanaFace 
+          isTalking={isTalking} 
+          isListening={false} 
+          isProcessing={isProcessing}
+          currentVolume={currentVolume}
+        />
+      </div>
+      
+      {/* Right side - Chat interface */}
+      <div className="chat-container">
+        {/* Messages area */}
+        <div className="messages-container">
+          {messages.map((msg, index) => (
+            <div 
+              key={index} 
+              className={`message ${msg.isUser ? 'user-message' : 'nana-message'}`}
+            >
+              {msg.text}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
         
-        {/* Input Area */}
+        {/* Input area */}
         <div className="input-container">
           <form onSubmit={handleSubmit} className="flex items-center w-full gap-2">
             <input
@@ -380,54 +280,22 @@ export default function Home() {
               className="message-input"
               value={userMessage}
               onChange={e => setUserMessage(e.target.value)}
-              disabled={isProcessing || isListening}
+              disabled={isProcessing}
             />
             
             <button
-              type="button"
-              onClick={handleToggleListen}
-              disabled={isProcessing}
-              className={`control-button p-3 ${isListening ? 'bg-red-500 hover:bg-red-600' : ''}`}
-            >
-              {isListening ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="6" y="6" width="12" height="12"></rect>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                  <line x1="12" x2="12" y1="19" y2="22"></line>
-                </svg>
-              )}
-            </button>
-            
-            <button
               type="submit"
-              disabled={isProcessing || isListening || !userMessage.trim()}
-              className="control-button px-4 py-2"
+              disabled={isProcessing || !userMessage.trim()}
+              className="send-button control-button"
             >
-              Envoyer
+              <Send size={18} />
             </button>
           </form>
           
-          {/* Élément Audio caché pour la lecture des fichiers MP3 */}
+          {/* Hidden audio element for playing MP3 files */}
           <audio ref={audioRef} style={{ display: 'none' }} controls />
-          
-          {/* Section de Debug (peut être masquée en production) */}
-          {audioUrl && (
-            <div className="mt-4 p-3 bg-gray-800 rounded text-white text-xs">
-              <div className="mb-2 font-bold">Audio Debug:</div>
-              <div className="overflow-hidden text-ellipsis">URL: {audioUrl}</div>
-              
-              {/* Audio Player visible en mode debug */}
-              <div className="mt-2">
-                <audio src={audioUrl} controls className="w-full h-8" />
-              </div>
-            </div>
-          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -4,47 +4,58 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
+    /* Nana Website Theme - Dark mode with blue/purple accents */
+    --background: 240 10% 4%; /* Very dark blue-ish black */
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 240 10% 8%; /* Dark background for cards */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 240 10% 8%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 338 100% 70%;
+    /* Brand blue */
+    --primary: 200 100% 50%; 
     --primary-foreground: 210 40% 98%;
 
-    --primary-dark: 338 59% 62%;
-    --primary-light: 338 100% 84%;
+    --primary-dark: 200 100% 40%;
+    --primary-light: 200 100% 60%;
 
-    --secondary: 261 100% 65%;
+    /* Purple accent */
+    --secondary: 261 80% 60%;
     --secondary-foreground: 210 40% 98%;
 
-    --secondary-dark: 261 54% 50%;
-    --secondary-light: 261 100% 81%;
+    --secondary-dark: 261 80% 40%;
+    --secondary-light: 261 80% 70%;
 
-    --accent: 43 100% 70%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent - Bright Teal */
+    --accent: 180 100% 50%;
+    --accent-foreground: 240 10% 4%;
 
-    --accent-dark: 43 59% 58%;
-    --accent-light: 43 100% 79%;
+    --accent-dark: 180 100% 40%;
+    --accent-light: 180 100% 60%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 65%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 240 10% 20%;
+    --input: 240 10% 20%;
+    --ring: 200 100% 50%;
 
     --radius: 0.5rem;
 
     --success: 134 61% 48%;
     --error: 359 100% 70%;
+    
+    /* Nana specific colors */
+    --nana-blue: #00BFFF;
+    --nana-purple: #8A2BE2;
+    --nana-dark: #0D0D14;
+    --nana-darker: #08080E;
+    --nana-gradient: linear-gradient(135deg, var(--nana-blue), var(--nana-purple));
   }
 
   * {
@@ -143,51 +154,170 @@
 
 .nana-container {
   width: 100%;
+  height: 100vh;
+  background-color: var(--nana-darker);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(138, 43, 226, 0.05), transparent 30%),
+    radial-gradient(circle at 90% 80%, rgba(0, 191, 255, 0.05), transparent 30%);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* Left side with Nana face */
+.nana-face-container {
+  width: 40%;
   height: 100%;
-  background-color: #000000;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 2rem;
+  position: relative;
+}
+
+/* Right side with chat */
+.chat-container {
+  width: 60%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(13, 13, 20, 0.7);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
-.input-container {
-  margin-top: 2rem;
-  width: 80%;
-  max-width: 600px;
-  position: relative;
+/* Message display area */
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
   display: flex;
+  flex-direction: column;
   gap: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nana-blue) rgba(30, 30, 30, 0.5);
+}
+
+.messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: rgba(30, 30, 30, 0.5);
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background-color: var(--nana-blue);
+  border-radius: 3px;
+}
+
+/* Message bubbles */
+.message {
+  max-width: 80%;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  position: relative;
+}
+
+.user-message {
+  align-self: flex-end;
+  background-color: var(--nana-blue);
+  color: #fff;
+  border-bottom-right-radius: 0.25rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.nana-message {
+  align-self: flex-start;
+  background-color: rgba(30, 30, 40, 0.7);
+  color: #fff;
+  border-bottom-left-radius: 0.25rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Input area */
+.input-container {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(10, 10, 15, 0.8);
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .message-input {
-  background-color: rgba(30, 30, 30, 0.8);
-  border: none;
-  border-radius: 9999px;
+  background-color: rgba(30, 30, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
   color: white;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1rem;
   width: 100%;
-  font-size: 1rem;
+  font-size: 0.95rem;
   outline: none;
+  transition: all 0.2s ease;
+}
+
+.message-input:focus {
+  border-color: var(--nana-blue);
+  box-shadow: 0 0 0 1px var(--nana-blue);
 }
 
 .message-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .control-button {
-  border-radius: 9999px;
-  background-color: rgba(30, 30, 30, 0.8);
-  border: none;
+  border-radius: 0.5rem;
+  background-color: rgba(30, 30, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  padding: 0.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
 }
 
 .control-button:hover {
-  background-color: rgba(50, 50, 50, 0.8);
+  background-color: rgba(0, 191, 255, 0.2);
+  border-color: var(--nana-blue);
+}
+
+.send-button {
+  background-color: var(--nana-blue);
+  border: none;
+  padding: 0.5rem 1rem;
+}
+
+.send-button:hover {
+  background-color: rgba(0, 191, 255, 0.8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .nana-container {
+    flex-direction: column;
+  }
+  
+  .nana-face-container {
+    width: 100%;
+    height: 40%;
+    padding: 1rem;
+  }
+  
+  .chat-container {
+    width: 100%;
+    height: 60%;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
 }
