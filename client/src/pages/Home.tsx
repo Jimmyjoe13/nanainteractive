@@ -63,7 +63,8 @@ export default function Home() {
       stopSpeaking();
       
       // On essaie d'utiliser l'API OpenAI pour une voix de qualité supérieure
-      await speakWithOpenAI(text, { voice: 'onyx', model: 'tts-1-hd' });
+      // Utiliser tts-1 (plus rapide) avec une vitesse plus élevée
+      await speakWithOpenAI(text, { voice: 'onyx', model: 'tts-1', speed: 1.35 });
     } catch (error) {
       console.error('Erreur avec la synthèse OpenAI, utilisation du navigateur:', error);
       
@@ -245,9 +246,27 @@ export default function Home() {
         timestamp: new Date() 
       }]);
       
-      // Utiliser la synthèse vocale pour lire la réponse
+      // Lecture immédiate d'un court indicateur sonore pour montrer que ça fonctionne
       if (isSpeechSupported && responseText) {
-        speak(responseText);
+        // Pour les réponses longues, commencer par lire une courte introduction
+        // pendant que l'audio complet se génère
+        if (responseText.length > 100) {
+          // Stopper toute synthèse vocale en cours
+          stopSpeaking();
+          
+          // Utiliser la synthèse du navigateur pour une réponse immédiate
+          // pendant que l'API OpenAI génère la réponse complète
+          const shortPrompt = "Je vous réponds tout de suite";
+          speakWithBrowser(shortPrompt, 1.2, 1);
+          
+          // Génération de l'audio complet avec OpenAI (légèrement retardée)
+          setTimeout(() => {
+            speak(responseText);
+          }, 1000); // Petit délai pour laisser l'intro se jouer
+        } else {
+          // Pour les réponses courtes, utiliser directement l'API vocale
+          speak(responseText);
+        }
       }
       
     } catch (error) {
