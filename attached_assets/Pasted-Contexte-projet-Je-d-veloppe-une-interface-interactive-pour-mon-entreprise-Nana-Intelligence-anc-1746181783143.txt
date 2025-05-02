@@ -1,0 +1,52 @@
+Contexte projet :
+
+Je développe une interface interactive pour mon entreprise Nana-Intelligence (anciennement Nana-AI), une agence spécialisée dans la création d’agents IA et la formation à l’intelligence artificielle pour les entreprises. Notre objectif est de démocratiser l’IA pour les PME en rendant son usage simple, visuel, et humainement engageant.
+
+Objectif de ce projet :
+
+Créer une interface visuelle interactive qui représente notre agent vocal IA, appelée NANA. Cette interface sera intégrée sur notre landing page (https://47aq6w42tmy8.swipepages.net/nana) et servira de démo de nos capacités. Elle devra être simple, engageante et féminine, avec une bouche et des yeux animés.
+
+🧠 Spécifications techniques attendues :
+
+Interface visuelle :
+
+Une bouche et deux yeux, style cartoon ou semi-réaliste.
+
+Les yeux suivent le curseur ou clignent.
+
+La bouche s’anime quand l’IA parle (syncro avec le son ou simple animation "parole").
+
+Animation fluide, légère, compatible navigateur web (HTML/CSS/JS ou canvas/WebGL).
+
+Style féminin, amical, rassurant.
+
+Voix de l’agent :
+
+Voix féminine naturelle (intégration via Web Speech API, ElevenLabs ou autre lib).
+
+Le texte est généré par un backend déjà existant : un agent IA vocal propulsé par n8n. Le webhook est déjà actif :
+👉 https://n8n-production-c3cb.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f
+
+Librairies autorisées :
+
+Tu peux utiliser p5.js, Three.js, GSAP, Tone.js, ou tout autre framework JS 2D/3D performant.
+
+Interface légère, responsive et facilement intégrable dans un site existant.
+
+Connexion backend :
+
+Requête envoyée via fetch() vers le webhook quand un utilisateur interagit (clic, voix, etc).
+
+La réponse de l’IA doit déclencher l’animation de la bouche + lecture vocale du texte retourné.
+
+💡 Bonus (si tu veux aller plus loin) :
+
+Intégrer des expressions faciales de base (yeux qui bougent, sourcils qui montent quand NANA pose une question, etc).
+
+Ajouter un petit effet lumineux ou aura quand l’IA est "active".
+
+Système de feedback visuel (genre une petite onde lumineuse quand tu parles à l’IA).
+
+Nom du projet : Interface NANA – agent IA vocal pour Nana-Intelligence
+Type de projet : Interface animée + intégration API vocale
+Technos recommandées : HTML, CSS, JS (avec canvas ou SVG), Web Speech API, animation JS (GSAP ou autre)
