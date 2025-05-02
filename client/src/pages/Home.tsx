@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import useAudioPlayer from "@/hooks/useAudioPlayer";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,7 +16,7 @@ export default function Home() {
   
   const { toast } = useToast();
   
-  // Custom hooks for speech
+  // Custom hooks for speech recognition
   const { 
     startListening, 
     stopListening, 
@@ -23,13 +24,42 @@ export default function Home() {
     isListeningSupported 
   } = useSpeechRecognition('fr-FR');
   
+  // Text-to-speech synthesis (fallback)
   const { 
     speak, 
     isSpeaking, 
     stopSpeaking, 
-    isSpeechSupported,
-    currentVolume 
+    isSpeechSupported
   } = useSpeechSynthesis();
+  
+  // Audio player for MP3 files from webhook
+  const {
+    playAudio,
+    stopAudio,
+    isPlaying: isPlayingAudio,
+    volume: audioVolume
+  } = useAudioPlayer({
+    onPlayStart: () => {
+      console.log("Lecture du fichier audio démarrée");
+      setIsTalking(true);
+    },
+    onPlayEnd: () => {
+      console.log("Lecture du fichier audio terminée");
+      setIsTalking(false);
+    },
+    onError: (error) => {
+      console.error("Erreur de lecture audio:", error);
+      toast({
+        title: "Erreur de lecture audio",
+        description: error,
+        variant: "destructive"
+      });
+      setIsTalking(false);
+    }
+  });
+  
+  // Get the current volume for mouth animation (from audio player or speech synthesis)
+  const currentVolume = isPlayingAudio ? audioVolume : (isSpeaking ? 0.5 : 0);
   
   // Check for transcript changes
   useEffect(() => {
@@ -38,10 +68,12 @@ export default function Home() {
     }
   }, [transcript]);
   
-  // Update isTalking when speaking status changes
+  // Update isTalking when speaking status changes from TTS
   useEffect(() => {
-    setIsTalking(isSpeaking);
-  }, [isSpeaking]);
+    if (!isPlayingAudio) { // Only update if we're not already playing an audio file
+      setIsTalking(isSpeaking);
+    }
+  }, [isSpeaking, isPlayingAudio]);
 
   // Handle toggle listening
   const handleToggleListen = () => {
@@ -72,10 +104,18 @@ export default function Home() {
     if (!text.trim()) return;
     
     try {
-      // Stop listening and start processing
+      // Stop any ongoing interactions
       if (isListening) {
         setIsListening(false);
         stopListening();
+      }
+      
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+      
+      if (isPlayingAudio) {
+        stopAudio();
       }
       
       setIsProcessing(true);
@@ -94,17 +134,35 @@ export default function Home() {
       // Log the response we get from the webhook
       console.log("Réponse reçue du webhook n8n:", response);
       
-      // Ensure we have a valid response
-      if (response && typeof response === 'string') {
-        // Speak response
+      // Check if we have an audio file to play
+      if (response.audioUrl) {
+        console.log("Lecture du fichier audio:", response.audioUrl);
+        playAudio(response.audioUrl);
+      } 
+      // Fallback to text-to-speech if no audio URL but we have text
+      else if (response.text) {
+        console.log("Utilisation de la synthèse vocale:", response.text);
         if (isSpeechSupported) {
-          console.log("Démarrage de la synthèse vocale avec le texte:", response);
-          speak(response);
+          speak(response.text);
         } else {
           console.warn("Synthèse vocale non supportée par ce navigateur");
+          toast({
+            title: "Avertissement",
+            description: "Votre navigateur ne supporte pas la synthèse vocale",
+            variant: "default"
+          });
         }
-      } else {
-        console.error("Format de réponse invalide reçu du webhook:", response);
+      } 
+      // If response is still a string (for backward compatibility)
+      else if (typeof response === 'string') {
+        console.log("Réponse en format string, utilisation de la synthèse vocale:", response);
+        if (isSpeechSupported) {
+          speak(response);
+        }
+      }
+      // No audio URL or text was found
+      else {
+        console.error("Aucune réponse audio ou texte valide reçue:", response);
         toast({
           title: "Erreur de format",
           description: "La réponse du serveur n'est pas dans un format valide.",
@@ -129,8 +187,13 @@ export default function Home() {
     
     if (!userMessage.trim()) return;
     
+    // Stop any ongoing audio or speech
     if (isSpeaking) {
       stopSpeaking();
+    }
+    
+    if (isPlayingAudio) {
+      stopAudio();
     }
     
     processUserInput(userMessage);
