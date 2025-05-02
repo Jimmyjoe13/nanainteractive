@@ -9,7 +9,7 @@ interface UseAudioPlayerProps {
 /**
  * Hook for playing audio files with callbacks for play state
  */
-export default function useAudioPlayer({ 
+export function useAudioPlayer({ 
   onPlayStart, 
   onPlayEnd, 
   onError 
@@ -132,30 +132,33 @@ export default function useAudioPlayer({
     if (!url || !audioRef.current) {
       console.log('No valid URL provided, simulating speech pattern only');
       
-      // Démarrer la simulation
-      setIsPlaying(true);
-      
-      // Informer le callback que la lecture a commencé
-      if (onPlayStart) onPlayStart();
-      
-      // Démarrer l'intervalle de volume pour la simulation
-      // (on le fait explicitement ici, même si useEffect le fait aussi)
-      intervalRef.current = window.setInterval(simulateVolumeData, 150);
-      
-      // Simuler pendant 4 secondes puis arrêter
+      // Simuler un délai de chargement pour plus de naturel (300ms)
       setTimeout(() => {
-        setIsPlaying(false);
-        setVolume(0);
+        // Démarrer la simulation
+        setIsPlaying(true);
         
-        // Nettoyer l'intervalle
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
+        // Informer le callback que la lecture a commencé
+        if (onPlayStart) onPlayStart();
         
-        // Informer le callback que la lecture est terminée
-        if (onPlayEnd) onPlayEnd();
-      }, 4000);
+        // Démarrer l'intervalle de volume pour la simulation
+        // (on le fait explicitement ici, même si useEffect le fait aussi)
+        intervalRef.current = window.setInterval(simulateVolumeData, 150);
+        
+        // Simuler pendant 5 secondes puis arrêter
+        setTimeout(() => {
+          setIsPlaying(false);
+          setVolume(0);
+          
+          // Nettoyer l'intervalle
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          
+          // Informer le callback que la lecture est terminée
+          if (onPlayEnd) onPlayEnd();
+        }, 5000);
+      }, 300);
       
       return;
     }

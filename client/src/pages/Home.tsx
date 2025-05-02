@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import useAudioPlayer from "@/hooks/useAudioPlayer";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,7 +47,7 @@ export default function Home() {
       console.log("Lecture du fichier audio terminée");
       setIsTalking(false);
     },
-    onError: (error) => {
+    onError: (error: string) => {
       console.error("Erreur de lecture audio:", error);
       toast({
         title: "Erreur de lecture audio",
