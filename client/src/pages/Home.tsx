@@ -27,7 +27,8 @@ export default function Home() {
     speak, 
     isSpeaking, 
     stopSpeaking, 
-    isSpeechSupported 
+    isSpeechSupported,
+    currentVolume 
   } = useSpeechSynthesis();
   
   // Check for transcript changes
@@ -125,7 +126,8 @@ export default function Home() {
           <NanaFace 
             isTalking={isTalking} 
             isListening={isListening} 
-            isProcessing={isProcessing} 
+            isProcessing={isProcessing}
+            currentVolume={currentVolume}
           />
         </div>
         
@@ -135,7 +137,7 @@ export default function Home() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Type a message..."
+              placeholder="Écrivez un message..."
               className="message-input"
               value={userMessage}
               onChange={e => setUserMessage(e.target.value)}
@@ -166,7 +168,7 @@ export default function Home() {
               disabled={isProcessing || isListening || !userMessage.trim()}
               className="control-button px-4 py-2"
             >
-              Send
+              Envoyer
             </button>
           </form>
         </div>

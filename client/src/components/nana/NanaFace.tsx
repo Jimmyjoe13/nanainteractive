@@ -1,22 +1,97 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 
 interface NanaFaceProps {
   isTalking: boolean;
   isListening: boolean;
   isProcessing: boolean;
+  currentVolume?: number;
 }
 
-export default function NanaFace({ isTalking, isListening, isProcessing }: NanaFaceProps) {
+export default function NanaFace({ 
+  isTalking, 
+  isListening, 
+  isProcessing,
+  currentVolume = 0
+}: NanaFaceProps) {
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
   const leftPupilRef = useRef<SVGCircleElement>(null);
   const rightPupilRef = useRef<SVGCircleElement>(null);
   const mouthRef = useRef<SVGPathElement>(null);
+  const mouthControlPointRef = useRef<{ x: number, y: number }>({ x: 100, y: 100 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const mouthTweenRef = useRef<gsap.core.Tween | null>(null);
+  const [glowIntensity, setGlowIntensity] = useState(2); // Control glow intensity with state
 
   // Glow effect based on state
   const glowClass = isListening ? "intense-glow" : "glow-effect";
+
+  // Handle mouth animation based on volume
+  useEffect(() => {
+    if (!mouthRef.current) return;
+    
+    if (isTalking) {
+      // Cancel any existing tween
+      if (mouthTweenRef.current) {
+        mouthTweenRef.current.kill();
+      }
+      
+      // Map the volume value (0-1) to a mouth shape
+      // The higher the volume, the more open the mouth
+      const baseY = 90;      // Base position when mouth is "closed"
+      const maxOpenY = 110;  // Maximum openness based on volume
+      
+      // Calculate new control point Y based on volume
+      const newY = baseY + (maxOpenY - baseY) * Math.min(currentVolume * 2, 1);
+      
+      // Animate to the new mouth shape with easing
+      mouthTweenRef.current = gsap.to(mouthControlPointRef.current, {
+        y: newY,
+        duration: 0.1, // Fast reaction to volume changes
+        ease: "power2.out",
+        onUpdate: () => {
+          // Update the path
+          const { x, y } = mouthControlPointRef.current;
+          mouthRef.current?.setAttribute(
+            'd', 
+            `M 75 90 Q ${x} ${y}, 125 90`
+          );
+        }
+      });
+      
+      // Update the glow intensity based on volume
+      const newGlowIntensity = 2 + currentVolume * 5;
+      setGlowIntensity(newGlowIntensity);
+    } else {
+      // When not talking, animate back to default smile
+      if (mouthTweenRef.current) {
+        mouthTweenRef.current.kill();
+      }
+      
+      // Return to neutral smile with a nicer bounce
+      mouthTweenRef.current = gsap.to(mouthControlPointRef.current, {
+        y: 100,
+        duration: 0.5,
+        ease: "elastic.out(1, 0.3)",
+        onUpdate: () => {
+          const { x, y } = mouthControlPointRef.current;
+          mouthRef.current?.setAttribute(
+            'd', 
+            `M 75 90 Q ${x} ${y}, 125 90`
+          );
+        }
+      });
+      
+      // Reset glow to default with animation
+      gsap.to({}, {
+        duration: 0.4,
+        onUpdate: () => {
+          setGlowIntensity(prev => Math.max(2, prev * 0.95));
+        }
+      });
+    }
+  }, [isTalking, currentVolume]);
 
   // Setup eye tracking
   useEffect(() => {
@@ -73,9 +148,12 @@ export default function NanaFace({ isTalking, isListening, isProcessing }: NanaF
     return () => clearInterval(blinkInterval);
   }, []);
 
+  // Generate dynamic filter for mouth glow
+  const mouthGlowFilter = `drop-shadow(0 0 ${glowIntensity}px rgba(0, 191, 255, 0.8))`;
+
   return (
     <div ref={containerRef} className="face-container">
-      <svg viewBox="0 0 200 130" className={`w-full h-full ${isTalking ? 'talking' : ''}`}>
+      <svg viewBox="0 0 200 130" className="w-full h-full">
         {/* Eyes */}
         <g id="eyes-container" className={glowClass}>
           {/* Left Eye */}
@@ -96,12 +174,12 @@ export default function NanaFace({ isTalking, isListening, isProcessing }: NanaF
         {/* Mouth */}
         <path 
           ref={mouthRef}
-          className={`mouth ${glowClass}`} 
           d="M 75 90 Q 100 100, 125 90" 
           stroke="#00BFFF" 
           strokeWidth="4" 
           fill="none" 
           strokeLinecap="round"
+          style={{ filter: mouthGlowFilter }}
         />
       </svg>
     </div>

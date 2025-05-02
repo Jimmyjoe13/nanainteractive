@@ -1,0 +1,65 @@
+CONTEXTE DU PROJET
+Je développe un agent IA vocal pour mon entreprise Nana-Intelligence, intégrée sur notre landing page. L’interface est un visage simplifié avec deux yeux lumineux et une bouche animée. L’objectif est de synchroniser l’animation de la bouche avec le texte vocalisé par l’IA pour créer une interaction crédible et engageante.
+
+CE QUE JE VEUX AMÉLIORER
+
+L’animation actuelle de la bouche n’est pas fluide, elle ne suit ni le rythme ni l’intensité de la voix de l’IA. Elle semble figée ou trop mécanique.
+
+✅ CE QUE TU DOIS FAIRE :
+1. 🎵 Synchronisation vocale → animation
+Récupère le volume audio en temps réel pendant la synthèse vocale.
+
+Utilise Web Audio API (AnalyserNode) pour analyser l’intensité sonore (volume / waveform) en live.
+
+Base l’animation de la bouche sur le volume détecté :
+
+plus la voix est forte, plus la bouche s’ouvre.
+
+quand c’est silencieux, la bouche se ferme doucement.
+
+Lien utile : https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+
+2. 💄 Animation fluide et naturelle
+Utilise GSAP ou Anime.js pour animer la bouche avec fluidité :
+
+transitions douces
+
+effet "rebond" ou interpolation douce (ease-out, ease-in)
+
+Ne fais pas juste un toggle "open/close" → crée un effet de bouche qui vit.
+
+3. 💡 Effets visuels
+Ajoute un glow léger sur la bouche pendant qu’elle parle (comme une pulsation lumineuse).
+
+La bouche doit revenir à son état neutre doucement après la fin de la réponse.
+
+🧠 LIBS SUGGÉRÉES POUR ÊTRE PRODUCTIF :
+🔊 Web Audio API pour analyser l’audio en temps réel.
+
+🎨 GSAP pour des animations fluides et faciles à ajuster.
+
+🎤 SpeechSynthesisUtterance pour vocaliser les réponses (si pas déjà intégré).
+
+🧠 Facultatif : three.js ou p5.js si tu veux passer à de la bouche 3D ou responsive.
+
+🧰 STRUCTURE RECOMMANDÉE :
+🎧 Quand une réponse arrive depuis le backend :
+
+Vocaliser le texte (SpeechSynthesis).
+
+Créer un AnalyserNode sur la voix générée.
+
+Bouger la bouche en fonction du volume.
+
+Utiliser GSAP pour que la bouche pulse de manière naturelle.
+
+🔁 CE QUE TU DOIS GARDER :
+L’interface en fond noir.
+
+Les yeux lumineux inchangés.
+
+La voix féminine naturelle.
+
+Le webhook n8n comme source des réponses.
+
+Nom du projet : Interface IA NANA v2 — animation synchronisée
