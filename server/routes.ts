@@ -4,6 +4,12 @@ import OpenAI from "openai";
 import { Readable } from "stream";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Route de santé pour les healthchecks de Railway
+  app.get('/api/health', (_req: Request, res: Response) => {
+    console.log('Healthcheck accessed');
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Initialisation de l'API OpenAI
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
