@@ -1,11 +1,5 @@
-import { useState, useEffect } from "react";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import { useState, useEffect, useRef } from "react";
 import NanaFace from "@/components/nana/NanaFace";
-import SpeechBubble from "@/components/nana/SpeechBubble";
-import ControlPanel from "@/components/nana/ControlPanel";
-import StatusIndicator from "@/components/nana/StatusIndicator";
-import FeatureCard from "@/components/features/FeatureCard";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { sendMessageToNana } from "@/lib/nanaApi";
@@ -16,8 +10,8 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
-  const [currentResponse, setCurrentResponse] = useState("");
-  const [showSpeechBubble, setShowSpeechBubble] = useState(false);
+  const [userMessage, setUserMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
   
@@ -68,11 +62,6 @@ export default function Home() {
       return;
     }
     
-    // Hide speech bubble when starting to listen
-    if (showSpeechBubble) {
-      setShowSpeechBubble(false);
-    }
-    
     setIsListening(true);
     startListening();
   };
@@ -83,17 +72,22 @@ export default function Home() {
     
     try {
       // Stop listening and start processing
-      setIsListening(false);
-      stopListening();
+      if (isListening) {
+        setIsListening(false);
+        stopListening();
+      }
+      
       setIsProcessing(true);
+      
+      // Clear input field if this came from the text input
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
       
       // Send to API
       const response = await sendMessageToNana(text);
       
-      // Display and speak response
-      setCurrentResponse(response);
-      setShowSpeechBubble(true);
-      
+      // Speak response
       if (isSpeechSupported) {
         speak(response);
       }
@@ -109,108 +103,74 @@ export default function Home() {
     }
   };
   
-  // Handle sample question selection
-  const handleSampleQuestion = (question: string) => {
-    if (isListening) {
-      stopListening();
-      setIsListening(false);
-    }
+  // Handle form submission for text input
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!userMessage.trim()) return;
     
     if (isSpeaking) {
       stopSpeaking();
     }
     
-    processUserInput(question);
+    processUserInput(userMessage);
+    setUserMessage("");
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
-      <main className="flex-grow flex flex-col items-center justify-center p-4 md:p-8">
-        {/* Introduction Section */}
-        <section className="max-w-3xl mx-auto text-center mb-8">
-          <h1 className="font-quicksand font-bold text-3xl md:text-4xl text-secondary mb-4">
-            Rencontrez NANA, votre assistante IA
-          </h1>
-          <p className="text-neutral-600 text-lg md:text-xl mb-6">
-            Découvrez notre agent vocal intelligent qui simplifie l'usage de l'IA pour votre entreprise
-          </p>
-        </section>
+    <div className="min-h-screen nana-container">
+      <main className="h-full flex flex-col items-center justify-center py-8">
+        {/* Nana Face */}
+        <div className="flex-grow flex items-center justify-center w-full">
+          <NanaFace 
+            isTalking={isTalking} 
+            isListening={isListening} 
+            isProcessing={isProcessing} 
+          />
+        </div>
         
-        {/* Nana Character */}
-        <section className="relative mb-12 w-full max-w-3xl flex flex-col items-center">
-          <div id="nana-container" className="relative w-full flex flex-col items-center animate-float">
-            {/* Face */}
-            <NanaFace 
-              isTalking={isTalking} 
-              isListening={isListening} 
-              isProcessing={isProcessing} 
+        {/* Input Area */}
+        <div className="input-container">
+          <form onSubmit={handleSubmit} className="flex items-center w-full gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Type a message..."
+              className="message-input"
+              value={userMessage}
+              onChange={e => setUserMessage(e.target.value)}
+              disabled={isProcessing || isListening}
             />
             
-            {/* Speech Bubble */}
-            <SpeechBubble 
-              text={currentResponse} 
-              isVisible={showSpeechBubble && !isProcessing && !isListening} 
-            />
-          </div>
-          
-          {/* Controls */}
-          <ControlPanel 
-            isListening={isListening}
-            isProcessing={isProcessing}
-            onToggleListen={handleToggleListen}
-            onSampleQuestion={handleSampleQuestion}
-          />
-          
-          {/* Status Indicator */}
-          <StatusIndicator 
-            isVisible={isListening || isProcessing}
-            isListening={isListening}
-            isProcessing={isProcessing}
-          />
-        </section>
-        
-        {/* Features Section */}
-        <section className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <FeatureCard 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-            }
-            title="Assistance IA"
-            description="Des agents intelligents qui s'adaptent aux besoins spécifiques de votre entreprise"
-            colorClass="bg-primary-light/30 text-primary"
-          />
-          
-          <FeatureCard 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-              </svg>
-            }
-            title="Formation IA"
-            description="Programmes de formation sur mesure pour intégrer l'IA à votre équipe"
-            colorClass="bg-secondary-light/30 text-secondary"
-          />
-          
-          <FeatureCard 
-            icon={
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            }
-            title="Innovation PME"
-            description="Solutions IA accessibles pour booster la performance de votre entreprise"
-            colorClass="bg-accent-light/30 text-accent-dark"
-          />
-        </section>
+            <button
+              type="button"
+              onClick={handleToggleListen}
+              disabled={isProcessing}
+              className={`control-button p-3 ${isListening ? 'bg-red-500 hover:bg-red-600' : ''}`}
+            >
+              {isListening ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="6" y="6" width="12" height="12"></rect>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" x2="12" y1="19" y2="22"></line>
+                </svg>
+              )}
+            </button>
+            
+            <button
+              type="submit"
+              disabled={isProcessing || isListening || !userMessage.trim()}
+              className="control-button px-4 py-2"
+            >
+              Send
+            </button>
+          </form>
+        </div>
       </main>
-      
-      <Footer />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
 interface NanaFaceProps {
@@ -8,58 +8,44 @@ interface NanaFaceProps {
 }
 
 export default function NanaFace({ isTalking, isListening, isProcessing }: NanaFaceProps) {
-  const faceRef = useRef<SVGCircleElement>(null);
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
-  const leftEyebrowRef = useRef<SVGPathElement>(null);
-  const rightEyebrowRef = useRef<SVGPathElement>(null);
+  const leftPupilRef = useRef<SVGCircleElement>(null);
+  const rightPupilRef = useRef<SVGCircleElement>(null);
+  const mouthRef = useRef<SVGPathElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Set face color based on state
-  useEffect(() => {
-    if (!faceRef.current) return;
-    
-    if (isListening) {
-      faceRef.current.setAttribute("stroke", "#FF6B6B"); // Error color
-    } else if (isProcessing) {
-      faceRef.current.setAttribute("stroke", "#FFD166"); // Accent color
-    } else {
-      faceRef.current.setAttribute("stroke", "#FF6B9D"); // Primary color
-    }
-  }, [isListening, isProcessing]);
+  // Glow effect based on state
+  const glowClass = isListening ? "intense-glow" : "glow-effect";
 
   // Setup eye tracking
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isTalking || !containerRef.current || !leftEyeRef.current || !rightEyeRef.current || !leftEyebrowRef.current || !rightEyebrowRef.current) return;
+      if (!containerRef.current || !leftPupilRef.current || !rightPupilRef.current) return;
       
       const containerRect = containerRef.current.getBoundingClientRect();
       const faceCenterX = containerRect.left + containerRect.width / 2;
       const faceCenterY = containerRect.top + containerRect.height / 2;
       
-      // Calculate angle and distance for eye movement
+      // Calculate angle and distance for pupil movement
       const angle = Math.atan2(e.clientY - faceCenterY, e.clientX - faceCenterX);
-      const distance = Math.min(3, Math.sqrt(Math.pow(e.clientX - faceCenterX, 2) + Math.pow(e.clientY - faceCenterY, 2)) / 100);
+      const distance = Math.min(2.5, Math.sqrt(Math.pow(e.clientX - faceCenterX, 2) + Math.pow(e.clientY - faceCenterY, 2)) / 100);
       
-      // Move eyes
-      const eyeX = Math.cos(angle) * distance;
-      const eyeY = Math.sin(angle) * distance;
+      // Move pupils
+      const pupilX = Math.cos(angle) * distance;
+      const pupilY = Math.sin(angle) * distance;
       
-      gsap.to(leftEyeRef.current, { 
-        attr: { transform: `translate(${40 + eyeX}, ${50 + eyeY})` },
-        duration: 0.2
+      gsap.to(leftPupilRef.current, { 
+        cx: pupilX, 
+        cy: pupilY,
+        duration: 0.3
       });
       
-      gsap.to(rightEyeRef.current, { 
-        attr: { transform: `translate(${90 + eyeX}, ${50 + eyeY})` },
-        duration: 0.2
+      gsap.to(rightPupilRef.current, { 
+        cx: pupilX, 
+        cy: pupilY,
+        duration: 0.3
       });
-      
-      // Move eyebrows slightly based on Y position
-      const eyebrowYOffset = e.clientY < faceCenterY ? -1 : 0;
-      
-      leftEyebrowRef.current.setAttribute('d', `M 35 ${40 + eyebrowYOffset} Q 40 ${37 + eyebrowYOffset}, 45 ${40 + eyebrowYOffset}`);
-      rightEyebrowRef.current.setAttribute('d', `M 85 ${40 + eyebrowYOffset} Q 90 ${37 + eyebrowYOffset}, 95 ${40 + eyebrowYOffset}`);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -67,64 +53,56 @@ export default function NanaFace({ isTalking, isListening, isProcessing }: NanaF
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [isTalking]);
+  }, []);
+
+  // Random blinking
+  useEffect(() => {
+    const blinkInterval = setInterval(() => {
+      if (leftEyeRef.current && rightEyeRef.current) {
+        // Blink animation
+        gsap.to([leftEyeRef.current, rightEyeRef.current], {
+          scaleY: 0.1,
+          duration: 0.1,
+          yoyo: true,
+          repeat: 1,
+          ease: "power2.inOut"
+        });
+      }
+    }, Math.random() * 3000 + 2000); // Random interval between 2-5 seconds
+    
+    return () => clearInterval(blinkInterval);
+  }, []);
 
   return (
     <div ref={containerRef} className="face-container">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary-light/30 to-secondary-light/30 rounded-full blur-xl transform scale-90 opacity-80 glow-effect"></div>
-      
-      <svg viewBox="0 0 130 130" className={`w-full h-full ${isTalking ? 'talking' : ''}`}>
-        {/* Face Shape */}
-        <circle 
-          ref={faceRef}
-          id="face" 
-          cx="65" 
-          cy="65" 
-          r="60" 
-          fill="#FFF7FB" 
-          stroke="#FF6B9D" 
-          strokeWidth="1.5" 
-        />
-        
-        {/* Eyes Container */}
-        <g id="eyes-container">
+      <svg viewBox="0 0 200 130" className={`w-full h-full ${isTalking ? 'talking' : ''}`}>
+        {/* Eyes */}
+        <g id="eyes-container" className={glowClass}>
           {/* Left Eye */}
-          <g ref={leftEyeRef} className="eye" id="left-eye" transform="translate(40, 50)">
-            <circle cx="0" cy="0" r="8" fill="white" stroke="#8A4FFF" strokeWidth="1" />
-            <circle className="eye-lid" cx="0" cy="0" r="3" fill="#212529" />
+          <g ref={leftEyeRef} className="eye" id="left-eye" transform="translate(65, 50)">
+            <circle cx="0" cy="0" r="15" fill="#000000" stroke="#00BFFF" strokeWidth="4" />
+            <circle ref={leftPupilRef} className="pupil" cx="0" cy="0" r="6" fill="#000000" />
+            <circle className="eye-highlight" cx="2" cy="-2" r="2" />
           </g>
           
           {/* Right Eye */}
-          <g ref={rightEyeRef} className="eye" id="right-eye" transform="translate(90, 50)">
-            <circle cx="0" cy="0" r="8" fill="white" stroke="#8A4FFF" strokeWidth="1" />
-            <circle className="eye-lid" cx="0" cy="0" r="3" fill="#212529" />
+          <g ref={rightEyeRef} className="eye" id="right-eye" transform="translate(135, 50)">
+            <circle cx="0" cy="0" r="15" fill="#000000" stroke="#00BFFF" strokeWidth="4" />
+            <circle ref={rightPupilRef} className="pupil" cx="0" cy="0" r="6" fill="#000000" />
+            <circle className="eye-highlight" cx="2" cy="-2" r="2" />
           </g>
-          
-          {/* Eyebrows */}
-          <path 
-            ref={leftEyebrowRef}
-            id="left-eyebrow" 
-            d="M 35 40 Q 40 37, 45 40" 
-            stroke="#FF6B9D" 
-            strokeWidth="2" 
-            fill="none" 
-          />
-          <path 
-            ref={rightEyebrowRef}
-            id="right-eyebrow" 
-            d="M 85 40 Q 90 37, 95 40" 
-            stroke="#FF6B9D" 
-            strokeWidth="2" 
-            fill="none" 
-          />
         </g>
         
         {/* Mouth */}
-        <path className="mouth" d="M 50 70 Q 65 75, 80 70" stroke="#FF6B9D" strokeWidth="2" fill="none" />
-        
-        {/* Blush */}
-        <circle cx="38" cy="65" r="5" fill="#FFADC9" opacity="0.5" />
-        <circle cx="92" cy="65" r="5" fill="#FFADC9" opacity="0.5" />
+        <path 
+          ref={mouthRef}
+          className={`mouth ${glowClass}`} 
+          d="M 75 90 Q 100 100, 125 90" 
+          stroke="#00BFFF" 
+          strokeWidth="4" 
+          fill="none" 
+          strokeLinecap="round"
+        />
       </svg>
     </div>
   );
