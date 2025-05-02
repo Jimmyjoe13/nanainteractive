@@ -63,8 +63,8 @@ export default function Home() {
       stopSpeaking();
       
       // On essaie d'utiliser l'API OpenAI pour une voix de qualité supérieure
-      // Utiliser tts-1 (plus rapide) avec une vitesse plus élevée
-      await speakWithOpenAI(text, { voice: 'onyx', model: 'tts-1', speed: 1.35 });
+      // Utiliser tts-1 (plus rapide) avec la voix Shimmer (féminine et naturelle)
+      await speakWithOpenAI(text, { voice: 'shimmer', model: 'tts-1', speed: 1.0 });
     } catch (error) {
       console.error('Erreur avec la synthèse OpenAI, utilisation du navigateur:', error);
       

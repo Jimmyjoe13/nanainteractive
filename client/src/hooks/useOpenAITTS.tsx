@@ -77,6 +77,38 @@ export function useOpenAITTS() {
     });
   }, []);
 
+  // Fonction utilitaire pour trouver un point logique où couper le texte
+  const findSentenceBreak = useCallback((text: string, minLength: number): number => {
+    // Chercher la fin de phrase la plus proche après minLength
+    const punctuation = ['.', '!', '?', ';', ':'];
+    let bestBreak = -1;
+    
+    // Rechercher après la longueur minimale
+    for (let i = minLength; i < Math.min(text.length, minLength + 100); i++) {
+      if (punctuation.includes(text[i])) {
+        bestBreak = i;
+        break;
+      }
+    }
+    
+    // Si on ne trouve pas de ponctuation, chercher un espace après minLength
+    if (bestBreak === -1) {
+      for (let i = minLength; i < Math.min(text.length, minLength + 50); i++) {
+        if (text[i] === ' ') {
+          bestBreak = i;
+          break;
+        }
+      }
+    }
+    
+    // Si on ne trouve toujours rien, couper au milieu
+    if (bestBreak === -1 && text.length > minLength * 2) {
+      bestBreak = Math.floor(text.length / 2);
+    }
+    
+    return bestBreak;
+  }, []);
+
   // Fonction pour générer et jouer l'audio via notre endpoint API qui utilise OpenAI TTS
   const speak = useCallback(async (text: string, options: Partial<TTSOptions> = {}) => {
     if (!text.trim()) return;
@@ -87,8 +119,8 @@ export function useOpenAITTS() {
       
       // Définir les options par défaut
       const defaultOptions: TTSOptions = {
-        model: 'tts-1-hd',
-        voice: 'onyx',
+        model: 'tts-1',
+        voice: 'shimmer',
         speed: 1.0
       };
       
@@ -101,8 +133,132 @@ export function useOpenAITTS() {
       // Démarrer la simulation pour l'animation de la bouche pendant le chargement
       startVolumeSimulation();
       
-      // Appeler notre API pour la synthèse vocale
-      console.log(`Génération de l'audio avec OpenAI TTS (voix: ${finalOptions.voice})...`);
+      // Stratégie d'optimisation pour les textes longs (>300 caractères)
+      // Pour les longs textes, on divise en deux parties et on génère la seconde
+      // pendant qu'on joue la première
+      if (text.length > 300) {
+        console.log("Texte long détecté, utilisation de la génération parallèle...");
+        
+        // Trouver un point logique où couper le texte (fin de phrase)
+        const breakIndex = findSentenceBreak(text, 100);
+        
+        if (breakIndex > 0) {
+          // Diviser le texte en deux parties
+          const firstPart = text.substring(0, breakIndex + 1);
+          const remainingPart = text.substring(breakIndex + 1);
+          
+          console.log(`Texte divisé en deux parties: ${firstPart.length} et ${remainingPart.length} caractères`);
+          
+          // Générer la première partie
+          const firstPartResponse = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: firstPart,
+              voice: finalOptions.voice,
+              model: finalOptions.model,
+              speed: finalOptions.speed
+            })
+          });
+          
+          if (!firstPartResponse.ok) {
+            const errorData = await firstPartResponse.json();
+            throw new Error(errorData.error || 'Erreur lors de la génération audio');
+          }
+          
+          // Préparer la génération de la seconde partie en parallèle
+          const secondPartPromise = fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: remainingPart,
+              voice: finalOptions.voice,
+              model: finalOptions.model,
+              speed: finalOptions.speed
+            })
+          });
+          
+          // Récupérer le blob audio de la première partie
+          const firstPartBlob = await firstPartResponse.blob();
+          const firstPartUrl = URL.createObjectURL(firstPartBlob);
+          
+          // Nettoyer l'ancienne URL si nécessaire
+          if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+          }
+          setAudioUrl(firstPartUrl);
+          
+          // Configurer et jouer le premier segment
+          if (!audioRef.current) {
+            audioRef.current = new Audio();
+            
+            // Gestionnaires d'événements
+            audioRef.current.addEventListener('play', () => {
+              setIsPlaying(true);
+              startVolumeSimulation();
+            });
+            
+            audioRef.current.addEventListener('pause', () => {
+              setIsPlaying(false);
+              stopVolumeSimulation();
+            });
+            
+            audioRef.current.addEventListener('error', (e) => {
+              console.error('Erreur de lecture audio:', e);
+              setIsPlaying(false);
+              stopVolumeSimulation();
+              setError('Erreur lors de la lecture audio.');
+            });
+          }
+          
+          // Gérer la fin de la première partie
+          audioRef.current.onended = async () => {
+            console.log("Première partie terminée, lecture de la suite...");
+            try {
+              // Récupérer la seconde partie (générée en parallèle)
+              const secondPartResponse = await secondPartPromise;
+              
+              if (!secondPartResponse.ok) {
+                const errorData = await secondPartResponse.json();
+                throw new Error(errorData.error || 'Erreur lors de la génération de la suite');
+              }
+              
+              const secondPartBlob = await secondPartResponse.blob();
+              const secondPartUrl = URL.createObjectURL(secondPartBlob);
+              
+              // Libérer la première URL
+              URL.revokeObjectURL(firstPartUrl);
+              setAudioUrl(secondPartUrl);
+              
+              // Jouer la seconde partie
+              audioRef.current.src = secondPartUrl;
+              await audioRef.current.play();
+              
+              // Réinitialiser l'événement onended
+              audioRef.current.onended = () => {
+                setIsPlaying(false);
+                stopVolumeSimulation();
+              };
+              
+            } catch (error) {
+              console.error("Erreur lors de la lecture de la seconde partie:", error);
+              setIsPlaying(false);
+              stopVolumeSimulation();
+              setError('Erreur lors de la lecture de la suite audio.');
+            }
+          };
+          
+          // Lancer la lecture de la première partie
+          audioRef.current.src = firstPartUrl;
+          await audioRef.current.play();
+          
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Si le texte est court ou si la division a échoué, utiliser l'approche standard
+      console.log(`Génération standard de l'audio avec OpenAI TTS (voix: ${finalOptions.voice})...`);
       
       // Appel à notre API backend
       const response = await fetch('/api/tts', {
@@ -148,11 +304,6 @@ export function useOpenAITTS() {
           stopVolumeSimulation();
         });
         
-        audioRef.current.addEventListener('ended', () => {
-          setIsPlaying(false);
-          stopVolumeSimulation();
-        });
-        
         audioRef.current.addEventListener('error', (e) => {
           console.error('Erreur de lecture audio:', e);
           setIsPlaying(false);
@@ -160,6 +311,12 @@ export function useOpenAITTS() {
           setError('Erreur lors de la lecture audio.');
         });
       }
+      
+      // Réinitialiser l'événement onended pour cette lecture standard
+      audioRef.current.onended = () => {
+        setIsPlaying(false);
+        stopVolumeSimulation();
+      };
       
       // Définir la source et lancer la lecture
       audioRef.current.src = audioObjectUrl;
@@ -172,7 +329,7 @@ export function useOpenAITTS() {
       stopVolumeSimulation();
       setIsLoading(false);
     }
-  }, [audioUrl, startVolumeSimulation, stopVolumeSimulation]);
+  }, [audioUrl, startVolumeSimulation, stopVolumeSimulation, findSentenceBreak]);
 
   // Fonction pour arrêter la lecture
   const stopPlayback = useCallback(() => {
