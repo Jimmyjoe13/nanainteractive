@@ -89,7 +89,7 @@ export function useSpeechSynthesis() {
     }
   }, [isSpeaking]);
 
-  // Find the best French female voice
+  // Find the best French male voice
   const getBestVoice = useCallback((text: string) => {
     // Log available voices for debugging
     if (voices.length > 0) {
@@ -98,12 +98,26 @@ export function useSpeechSynthesis() {
       console.warn('Aucune voix disponible!');
     }
   
-    // First try to find a French female voice
-    let voice = voices.find(v => 
-      v.lang.includes('fr') && 
-      (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('femme')));
+    // Preferred voices in order: Paul (Microsoft), Google français
+    let voice;
     
-    // If no French female voice, try any French voice
+    // First try Microsoft Paul - French male voice
+    voice = voices.find(v => 
+      v.name.includes('Paul') && v.lang.includes('fr'));
+    
+    // If not found, try any male French voice
+    if (!voice) {
+      voice = voices.find(v => 
+        v.lang.includes('fr') && 
+        (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('homme')));
+    }
+    
+    // If not found, try Google français (generally sounds more natural)
+    if (!voice) {
+      voice = voices.find(v => v.name === 'Google français');
+    }
+    
+    // If still not found, any French voice
     if (!voice) {
       voice = voices.find(v => v.lang.includes('fr'));
     }
@@ -213,7 +227,7 @@ export function useSpeechSynthesis() {
   }, [isSpeaking, setupSpeechAnalysis]);
 
   // Speak function
-  const speak = useCallback((text: string, rate = 1.0, pitch = 1.1) => {
+  const speak = useCallback((text: string, rate = 0.95, pitch = 1.0) => {
     if (!synthesisRef.current || !isSpeechSupported) return;
     
     // Stop any current speech
@@ -227,8 +241,9 @@ export function useSpeechSynthesis() {
     }
     
     utterance.lang = 'fr-FR';
-    utterance.rate = rate;
-    utterance.pitch = pitch;
+    utterance.rate = rate; // Légèrement plus lent pour une voix plus naturelle
+    utterance.pitch = pitch; // Tonalité neutre pour sonner moins robotique
+    utterance.volume = 1.0; // Volume maximum
     
     // Event handlers
     utterance.onstart = () => setIsSpeaking(true);

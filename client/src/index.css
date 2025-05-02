@@ -302,6 +302,37 @@
   background-color: rgba(0, 191, 255, 0.8);
 }
 
+/* Style pour le bouton d'arrêt de la synthèse vocale */
+.stop-speaking-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 1.5rem;
+  background-color: var(--nana-purple);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.stop-speaking-button.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.stop-speaking-button:hover {
+  background-color: rgba(138, 43, 226, 0.8);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .nana-container {

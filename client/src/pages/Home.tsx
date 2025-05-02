@@ -3,7 +3,7 @@ import NanaFace from "@/components/nana/NanaFace";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { sendMessageToNana } from "@/lib/nanaApi";
 import { useToast } from "@/hooks/use-toast";
-import { Send } from "lucide-react";
+import { Send, Square, Volume2, VolumeX } from "lucide-react";
 
 export default function Home() {
   // State for UI
@@ -256,6 +256,24 @@ export default function Home() {
       
       {/* Right side - Chat interface */}
       <div className="chat-container">
+        {/* Bouton pour arrêter la synthèse vocale */}
+        <button
+          className={`stop-speaking-button ${isSpeaking ? 'visible' : ''}`}
+          onClick={() => {
+            if (isSpeaking) {
+              stopSpeaking();
+              toast({
+                title: "Synthèse vocale arrêtée",
+                description: "La lecture a été interrompue",
+                variant: "default"
+              });
+            }
+          }}
+        >
+          <VolumeX size={16} />
+          Arrêter la voix
+        </button>
+        
         {/* Messages area */}
         <div className="messages-container">
           {messages.map((msg, index) => (
