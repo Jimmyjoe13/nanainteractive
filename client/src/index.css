@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 338 100% 70%;
+    --primary-foreground: 210 40% 98%;
+
+    --primary-dark: 338 59% 62%;
+    --primary-light: 338 100% 84%;
+
+    --secondary: 261 100% 65%;
+    --secondary-foreground: 210 40% 98%;
+
+    --secondary-dark: 261 54% 50%;
+    --secondary-light: 261 100% 81%;
+
+    --accent: 43 100% 70%;
+    --accent-foreground: 222 47% 11%;
+
+    --accent-dark: 43 59% 58%;
+    --accent-light: 43 100% 79%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --success: 134 61% 48%;
+    --error: 359 100% 70%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Quicksand', sans-serif;
+  }
+}
+
+@keyframes talking {
+  0%, 100% { d: path('M 50 70 Q 65 75, 80 70'); }
+  50% { d: path('M 50 70 Q 65 60, 80 70'); }
+}
+
+@keyframes blink {
+  0%, 95%, 100% { transform: scaleY(1); }
+  97% { transform: scaleY(0.1); }
+}
+
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 107, 157, 0.7)); }
+  50% { filter: drop-shadow(0 0 15px rgba(255, 107, 157, 0.9)); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  50% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.face-container {
+  width: 300px;
+  height: 300px;
+  max-width: 100%;
+  position: relative;
+}
+
+.eye {
+  transition: transform 0.2s ease;
+}
+
+.eye-lid {
+  animation: blink 4s infinite;
+  transform-origin: center;
+}
+
+.talking .mouth {
+  animation: talking 0.35s infinite;
+}
+
+.glow-effect {
+  animation: glow 3s infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.listening-indicator::before {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 107, 157, 0.4);
+  width: 100%;
+  height: 100%;
+  animation: pulseRing 2s infinite;
+  z-index: -1;
+}
