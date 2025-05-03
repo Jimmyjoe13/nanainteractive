@@ -5,8 +5,8 @@
  * Ce script doit être exécuté après le build et avant de démarrer l'application en production
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Corrige les références import.meta.dirname dans les fichiers JS transpilés

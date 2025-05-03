@@ -5,9 +5,9 @@
  * Ce script compile et exécute l'application comme elle le serait sur Railway
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 // Fonction pour exécuter une commande et afficher sa sortie
 function runCommand(command, options = {}) {

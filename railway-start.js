@@ -38,5 +38,5 @@ console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`PORT: ${process.env.PORT}`);
 console.log('============================');
 
-// Démarrer l'application
-require('../dist/index.js');
+// Démarrer l'application (utilisant import dynamique ESM au lieu de require)
+import('../dist/index.js');

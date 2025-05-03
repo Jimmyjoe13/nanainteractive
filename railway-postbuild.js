@@ -5,8 +5,8 @@
  * Cette solution permet de corriger les erreurs de import.meta.dirname sans modifier les fichiers source
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Parcourt un répertoire récursivement et applique une fonction à chaque fichier
