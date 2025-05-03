@@ -130,23 +130,57 @@ export default function NanaFace({
     };
   }, []);
 
-  // Random blinking
+  // Random blinking with GSAP - corrected to return eyes fully open after blink
   useEffect(() => {
-    const blinkInterval = setInterval(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const blink = () => {
       if (leftEyeRef.current && rightEyeRef.current) {
-        // Blink animation
-        gsap.to([leftEyeRef.current, rightEyeRef.current], {
+        gsap.timeline({
+          onComplete: () => {
+            timeoutId = setTimeout(blink, Math.random() * 4000 + 3000);
+          }
+        })
+        .to([leftEyeRef.current, rightEyeRef.current], {
           scaleY: 0.1,
-          duration: 0.1,
-          yoyo: true,
-          repeat: 1,
-          ease: "power2.inOut"
+          duration: 0.12,
+          ease: "power1.inOut"
+        })
+        .to([leftEyeRef.current, rightEyeRef.current], {
+          scaleY: 1,
+          duration: 0.3,
+          ease: "power1.inOut"
         });
+      } else {
+        timeoutId = setTimeout(blink, 3000);
       }
-    }, Math.random() * 3000 + 2000); // Random interval between 2-5 seconds
-    
-    return () => clearInterval(blinkInterval);
+    };
+
+    blink();
+
+    return () => clearTimeout(timeoutId);
   }, []);
+
+  /*
+  // Alternative: Pure CSS blinking animation
+  // Add this CSS to your styles (e.g. in client/src/index.css or styled-components)
+  //
+  // @keyframes blink {
+  //   0%, 20%, 40%, 60%, 80%, 100% { transform: scaleY(1); }
+  //   10%, 30%, 50%, 70%, 90% { transform: scaleY(0.1); }
+  // }
+  //
+  // .eye {
+  //   animation: blink 6s infinite;
+  //   animation-timing-function: ease-in-out;
+  //   animation-delay: calc(var(--blink-delay, 0s));
+  // }
+  //
+  // To randomize delay per eye, you can set inline style or CSS variable:
+  // style={{ '--blink-delay': '2s' }} as React.CSSProperties
+  //
+  // Then remove the GSAP blinking useEffect above.
+  */
 
   // Generate dynamic filter for mouth glow
   const mouthGlowFilter = `drop-shadow(0 0 ${glowIntensity}px rgba(0, 191, 255, 0.8))`;
