@@ -1,7 +1,7 @@
 # Configuration Railway
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm run build && npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js && mkdir -p dist/public && cp -r client/dist/* dist/public/ || echo 'No client files to copy'"
+buildCommand = "npm run build && npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js && mkdir -p dist/public && cp -r client/dist/* dist/public/ || echo 'No client files to copy'"
 
 [deploy]
 numReplicas = 1

@@ -1,0 +1,89 @@
+
+added 494 packages, and audited 495 packages in 7s
+
+
+63 packages are looking for funding
+  run `npm fund` for details
+
+
+5 moderate severity vulnerabilities
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.3.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.3.0
+npm notice To update run: npm install -g npm@11.3.0
+npm notice
+
+[builder 4/8] RUN npm ci  ✔ 7s
+
+[builder 5/8] COPY . .
+
+[builder 5/8] COPY . .  ✔ 136ms
+
+[builder 6/8] RUN npm run build
+
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v5.4.18 building for production...
+
+transforming...
+
+✓ 1659 modules transformed.
+
+rendering chunks...
+
+computing gzip size...
+
+../dist/public/index.html                   0.68 kB │ gzip:   0.39 kB
+
+../dist/public/assets/index-B9oIYRcM.css   63.51 kB │ gzip:  11.50 kB
+
+../dist/public/assets/index-ChCdwoqZ.js   312.48 kB │ gzip: 105.67 kB
+
+✓ built in 3.44s
+
+
+  dist/index.js  7.2kb
+
+⚡ Done in 2ms
+
+[builder 6/8] RUN npm run build  ✔ 3s
+
+[builder 7/8] RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js
+
+✘ [ERROR] Cannot use both "outfile" and "outdir"
+
+1 error
+
+✕ [builder 7/8] RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js 
+process "/bin/sh -c npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js" did not complete successfully: exit code: 1
+ 
+
+Dockerfile:18
+
+-------------------
+
+16 |
+
+17 |     # Compilation du backend avec notre fichier production-ready
+
+18 | >>> RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js
+
+19 |
+
+20 |     # Création du répertoire public et copie des fichiers du client
+
+-------------------
+
+ERROR: failed to solve: process "/bin/sh -c npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js" did not complete successfully: exit code: 1

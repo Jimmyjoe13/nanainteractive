@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build
 
 # Compilation du backend avec notre fichier production-ready
-RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js
+RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js
 
 # Création du répertoire public et copie des fichiers du client
 RUN mkdir -p dist/public && \
