@@ -19,6 +19,7 @@ RUN npx esbuild server/index-prod.ts --platform=node --packages=external --bundl
 
 # Exécution des scripts de post-build pour corriger les problèmes potentiels
 RUN node railway-postbuild.js
+# Nous nous assurons que le fichier est en mode ESM pour respecter type: module dans package.json
 
 # Deuxième étape pour une image plus légère
 FROM node:20-alpine

@@ -1,10 +1,11 @@
 # Configuration Railway
 [build]
-builder = "DOCKERFILE"
-dockerfile = "Dockerfile"
+builder = "NIXPACKS"
+buildCommand = "npm run build && npx esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js && node railway-postbuild.js"
 
 [deploy]
 numReplicas = 1
+startCommand = "node dist/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
