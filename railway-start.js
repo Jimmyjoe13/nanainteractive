@@ -5,38 +5,46 @@
  * Exécute l'application en production après avoir appliqué les adaptations nécessaires
  */
 
-console.log('🚀 Démarrage de l\'application NANA sur Railway...');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
-// Définir NODE_ENV
+// Configuration de l'environnement
 process.env.NODE_ENV = 'production';
 
-// Définir le port d'écoute (utiliser celui fourni par Railway ou 5000 par défaut)
-if (!process.env.PORT) {
-  console.log('⚠️ Variable PORT non définie, utilisation du port 5000 par défaut');
-  process.env.PORT = '5000';
-}
+console.log('🚀 Démarrage de l\'application NANA sur Railway...');
 
-// Vérifier les variables d'environnement essentielles
-const requiredVars = ['DATABASE_URL'];
-const missingVars = requiredVars.filter(varName => !process.env[varName]);
+// Affichage des informations système de base
+console.log('==== Informations système ====');
+console.log(`Node.js: ${process.version}`);
+console.log(`Plateforme: ${process.platform} ${process.arch}`);
+console.log(`Répertoire: ${process.cwd()}`);
+console.log(`PORT: ${process.env.PORT || '(non défini)'}`);
+console.log('============================');
 
-if (missingVars.length > 0) {
-  console.error('❌ Variables d\'environnement manquantes:');
-  missingVars.forEach(varName => {
-    console.error(`   - ${varName}`);
-  });
-  console.error('Assurez-vous de configurer ces variables dans votre projet Railway');
+// Vérification des fichiers nécessaires
+const distIndexPath = path.join(process.cwd(), 'dist', 'index.js');
+
+if (!fs.existsSync(distIndexPath)) {
+  console.error(`❌ Erreur: Le fichier ${distIndexPath} n'existe pas. L'application ne peut pas démarrer.`);
+  console.log('💡 Conseil: Exécutez d\'abord la commande de build pour générer les fichiers nécessaires.');
   process.exit(1);
 }
 
-// Journaliser les informations système
-console.log('==== Informations système ====');
-console.log(`Node.js: ${process.version}`);
-console.log(`OS: ${process.platform} ${process.arch}`);
-console.log(`Répertoire: ${process.cwd()}`);
-console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`PORT: ${process.env.PORT}`);
-console.log('============================');
-
-// Démarrer l'application (utilisant import dynamique ESM au lieu de require)
-import('../dist/index.js');
+try {
+  // Démarrage de l'application
+  console.log('🔄 Démarrage du serveur...');
+  
+  // Importer et démarrer le serveur
+  import('./dist/index.js')
+    .then(() => {
+      console.log('✅ Application démarrée avec succès');
+    })
+    .catch(err => {
+      console.error('❌ Erreur au démarrage de l\'application:', err);
+      process.exit(1);
+    });
+} catch (error) {
+  console.error('❌ Erreur fatale au démarrage:', error);
+  process.exit(1);
+}
