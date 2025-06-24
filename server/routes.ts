@@ -128,18 +128,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ne pas bloquer la réponse principale si le webhook échoue
       }
     } catch (error) {
-      console.error('Erreur détaillée lors de la génération de la synthèse vocale:', error);
-      // NOTE: Pour le débogage, nous renvoyons plus de détails. À retirer en production.
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      const errorStack = error instanceof Error ? error.stack : 'Pas de stack trace disponible';
-      
+      console.error('Erreur lors de la génération de la synthèse vocale:', error);
       res.status(500).json({ 
-        error: 'Erreur interne du serveur lors de la génération de la synthèse vocale.',
-        details: {
-          message: errorMessage,
-          stack: errorStack,
-          rawError: JSON.stringify(error, Object.getOwnPropertyNames(error)) // Sérialiser l'erreur brute
-        }
+        error: 'Erreur lors de la génération de la synthèse vocale',
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
       });
     }
   });
