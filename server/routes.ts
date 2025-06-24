@@ -103,6 +103,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Envoyer l'audio en réponse
       res.end(buffer);
+
+      // Envoyer une requête au webhook après avoir envoyé la réponse audio
+      try {
+        const webhookUrl = 'https://primary-production-689f.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
+        console.log(`Envoi de la requête au webhook: ${webhookUrl}`);
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            event: 'tts_generated',
+            text: text,
+            voice: voice,
+            model: model,
+            speed: speed,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        console.log('Requête au webhook envoyée avec succès.');
+      } catch (webhookError) {
+        console.error('Erreur lors de l\'envoi de la requête au webhook:', webhookError);
+        // Ne pas bloquer la réponse principale si le webhook échoue
+      }
     } catch (error) {
       console.error('Erreur lors de la génération de la synthèse vocale:', error);
       res.status(500).json({ 
