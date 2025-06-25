@@ -20,10 +20,14 @@ export function serveStatic(app: Express) {
   
   log(`serving static files from ${publicDir}`);
   
-  // Servir les fichiers statiques
-  app.use(express.static(publicDir));
+  // Servir les fichiers statiques (JS, CSS, images, etc.) avec une politique de cache agressive
+  // car ils ont des noms de fichiers uniques (cache-busting).
+  app.use(express.static(publicDir, {
+    immutable: true,
+    maxAge: "1y"
+  }));
   
-  // Toutes les routes non-API servent l'application React
+  // Toutes les routes non-API servent le fichier index.html, qui ne doit JAMAIS être mis en cache.
   app.get("*", (req, res, next) => {
     // Ignorer les requêtes API
     if (req.path.startsWith("/api")) {
@@ -32,6 +36,9 @@ export function serveStatic(app: Express) {
     
     // Servir le fichier index.html pour toutes les autres routes
     const indexPath = path.join(publicDir, "index.html");
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     return res.sendFile(indexPath);
   });
 }
