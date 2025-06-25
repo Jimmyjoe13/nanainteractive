@@ -19,38 +19,42 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
   const apiUrl = '/api/chat';
   
   try {
-    console.log('🚀 [DEBUG] Sending message to backend API:', message);
-    console.log('🚀 [DEBUG] API URL:', apiUrl);
-    console.log('🚀 [DEBUG] Current location:', window.location.href);
+    console.log('🚀 [CLIENT] Envoi du message vers l\'API backend:', message);
+    console.log('🚀 [CLIENT] URL de l\'API:', apiUrl);
+    console.log('🚀 [CLIENT] Localisation actuelle:', window.location.href);
+    
+    const requestBody = { message };
+    console.log('🚀 [CLIENT] Corps de la requête:', JSON.stringify(requestBody, null, 2));
     
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ message })
+      body: JSON.stringify(requestBody)
     });
     
-    console.log('🚀 [DEBUG] Response status:', response.status);
-    console.log('🚀 [DEBUG] Response ok:', response.ok);
-    console.log('🚀 [DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('🚀 [CLIENT] Statut de réponse:', response.status);
+    console.log('🚀 [CLIENT] Réponse OK:', response.ok);
+    console.log('🚀 [CLIENT] Headers de réponse:', Object.fromEntries(response.headers.entries()));
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.log('🚀 [DEBUG] Error response body:', errorText);
+      console.log('🚀 [CLIENT] Corps de réponse d\'erreur:', errorText);
       throw new Error(`Server responded with status: ${response.status}, body: ${errorText}`);
     }
     
     // Log the raw response for debugging
     const responseText = await response.text();
-    console.log('Raw response from backend API:', responseText);
+    console.log('🚀 [CLIENT] Réponse brute de l\'API backend:', responseText);
     
     // Parse the response, handling various response formats
     let data;
     try {
       data = JSON.parse(responseText);
+      console.log('🚀 [CLIENT] Données parsées:', JSON.stringify(data, null, 2));
     } catch (e) {
-      console.error('Failed to parse API response as JSON:', e);
+      console.error('🚀 [CLIENT] Erreur de parsing JSON:', e);
       // If the response is a plain text, use it directly
       return {
         text: responseText || "Désolé, la réponse n'a pas pu être traitée correctement."
@@ -76,14 +80,14 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
       };
     }
     
-    // Handle text-only response formats
+    // Handle text-only response formats - priorité au nouveau format standardisé
     const text = 
+      // Nouveau format standardisé du serveur { text: "...", originalResponse: {...} }
+      data.text ||
       // Check for n8n webhook format with data.output (comme visible dans l'exemple)
       data.data?.output ||
       // Check standard format { message: "..." }
       data.message || 
-      // Check for { text: "..." } format
-      data.text || 
       // Check for { response: "..." } format
       data.response || 
       // Check for { content: "..." } format
@@ -92,10 +96,12 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
       (typeof data === 'string' ? data : null) ||
       // Check for other nested formats
       (data.data?.message || data.data?.text || data.data?.response || data.data?.content) ||
+      // Vérifier dans originalResponse si disponible
+      (data.originalResponse?.data?.output || data.originalResponse?.output || data.originalResponse?.message) ||
       // Default message if nothing found
       "Je suis désolée, j'ai eu du mal à comprendre. Pourriez-vous reformuler?";
     
-    console.log('Extracted response message:', text);
+    console.log('🚀 [CLIENT] Message extrait de la réponse:', text);
     return { text };
   } catch (error) {
     console.error('🚀 [DEBUG] Error sending message to NANA:', error);

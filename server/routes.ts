@@ -146,28 +146,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      console.log(`Forwarding message to n8n webhook: ${message}`);
+      console.log(`🚀 [WEBHOOK] Envoi du message vers n8n: "${message}"`);
+      console.log(`🚀 [WEBHOOK] URL: ${webhookUrl}`);
+      
+      const requestBody = { message };
+      console.log(`🚀 [WEBHOOK] Corps de la requête:`, JSON.stringify(requestBody, null, 2));
       
       const n8nResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log(`🚀 [WEBHOOK] Statut de réponse: ${n8nResponse.status}`);
+      console.log(`🚀 [WEBHOOK] Headers de réponse:`, Object.fromEntries(n8nResponse.headers.entries()));
+
       if (!n8nResponse.ok) {
-        throw new Error(`n8n webhook responded with status: ${n8nResponse.status}`);
+        const errorText = await n8nResponse.text();
+        console.log(`🚀 [WEBHOOK] Erreur - Corps de réponse: ${errorText}`);
+        throw new Error(`n8n webhook responded with status: ${n8nResponse.status}, body: ${errorText}`);
       }
 
-      const n8nData = await n8nResponse.json();
-      console.log('Received response from n8n:', n8nData);
+      // Lire la réponse brute d'abord
+      const responseText = await n8nResponse.text();
+      console.log(`🚀 [WEBHOOK] Réponse brute de n8n:`, responseText);
 
-      // Renvoyer la réponse de n8n au client
-      res.json(n8nData);
+      // Parser la réponse JSON
+      let n8nData;
+      try {
+        n8nData = JSON.parse(responseText);
+        console.log(`🚀 [WEBHOOK] Réponse parsée de n8n:`, JSON.stringify(n8nData, null, 2));
+      } catch (parseError) {
+        console.error(`🚀 [WEBHOOK] Erreur de parsing JSON:`, parseError);
+        throw new Error(`Invalid JSON response from n8n: ${responseText}`);
+      }
+
+      // Extraire le message de l'agent IA
+      const agentMessage = n8nData?.data?.output || n8nData?.output || n8nData?.message || n8nData?.text || n8nData?.response;
+      console.log(`🚀 [WEBHOOK] Message extrait de l'agent IA: "${agentMessage}"`);
+
+      // Renvoyer la réponse de n8n au client dans un format standardisé
+      const response = {
+        text: agentMessage || "Désolé, je n'ai pas pu traiter votre demande.",
+        originalResponse: n8nData
+      };
+      
+      console.log(`🚀 [WEBHOOK] Réponse finale envoyée au client:`, JSON.stringify(response, null, 2));
+      res.json(response);
 
     } catch (error) {
-      console.error('Error forwarding message to n8n:', error);
+      console.error('🚀 [WEBHOOK] Erreur lors de la communication avec n8n:', error);
       res.status(502).json({ 
         error: 'Failed to communicate with the AI agent.',
         details: error instanceof Error ? error.message : 'Unknown error'
