@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route pour le chat, agissant comme un proxy vers le webhook n8n
   app.post('/api/chat', async (req: Request, res: Response) => {
     const { message } = req.body;
-    const webhookUrl = 'https://n8n-production-c3cb.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
+    const webhookUrl = 'https://primary-production-689f.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
