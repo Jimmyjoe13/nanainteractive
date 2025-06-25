@@ -15,14 +15,13 @@ interface NanaResponse {
  * @returns A promise that resolves to the NANA response
  */
 export async function sendMessageToNana(message: string): Promise<NanaResponse> {
-  const webhookUrl = 'https://n8n-production-c3cb.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
+  // L'URL pointe maintenant vers notre propre backend, qui agit comme un proxy
+  const apiUrl = '/api/chat';
   
   try {
-    console.log('Sending message to NANA webhook:', message);
+    console.log('Sending message to backend API:', message);
     
-    // Pour l'instant nous n'avons pas directement accès aux données binaires
-    // Nous allons donc directement faire la requête standard
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -36,14 +35,14 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
     
     // Log the raw response for debugging
     const responseText = await response.text();
-    console.log('Raw response from webhook:', responseText);
+    console.log('Raw response from backend API:', responseText);
     
     // Parse the response, handling various response formats
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (e) {
-      console.error('Failed to parse webhook response as JSON:', e);
+      console.error('Failed to parse API response as JSON:', e);
       // If the response is a plain text, use it directly
       return {
         text: responseText || "Désolé, la réponse n'a pas pu être traitée correctement."
@@ -54,56 +53,13 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
     if (data.mimeType && data.mimeType.includes('audio')) {
       console.log('Audio response detected:', data);
       
-      // La structure de n8n ne nous permet pas d'accéder directement au fichier audio
-      console.log('Pas d\'accès direct au fichier audio, récupération du texte transcrit');
+      // Cette logique complexe de fallback n'est plus nécessaire car le backend gère la communication
+      // et devrait nous renvoyer un format de données cohérent.
+      // Nous nous attendons à ce que la réponse contienne le texte de l'agent.
+      const agentText = data.data?.output || data.message || data.text || "Audio response received, but no text.";
       
-      // Essayons de récupérer le texte qui devrait être dans la réponse (envoyé par n8n)
-      // Faisons une nouvelle requête pour récupérer la réponse texte de l'agent
-      try {
-        const textResponse = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ message: "Pouvez-vous répéter votre dernière réponse sous forme de texte uniquement?" })
-        });
-        
-        if (textResponse.ok) {
-          const textData = await textResponse.text();
-          let parsedTextData;
-          
-          try {
-            parsedTextData = JSON.parse(textData);
-          } catch (e) {
-            parsedTextData = { text: textData };
-          }
-          
-          const fallbackText = 
-            parsedTextData.message || 
-            parsedTextData.text || 
-            parsedTextData.response || 
-            parsedTextData.content ||
-            (typeof parsedTextData === 'string' ? parsedTextData : null) ||
-            "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.";
-          
-          console.log('Texte de fallback récupéré:', fallbackText);
-          
-          return {
-            text: fallbackText,
-            mimeType: data.mimeType,
-            fileType: data.fileType,
-            fileExtension: data.fileExtension,
-            fileName: data.fileName,
-            fileSize: data.fileSize
-          };
-        }
-      } catch (fallbackError) {
-        console.error('Erreur lors de la récupération du texte de secours:', fallbackError);
-      }
-      
-      // Si la requête échoue, on renvoie un message générique
       return {
-        text: "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.",
+        text: agentText,
         mimeType: data.mimeType,
         fileType: data.fileType,
         fileExtension: data.fileExtension,

@@ -136,6 +136,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Route pour le chat, agissant comme un proxy vers le webhook n8n
+  app.post('/api/chat', async (req: Request, res: Response) => {
+    const { message } = req.body;
+    const webhookUrl = 'https://n8n-production-c3cb.up.railway.app/webhook/96837ad7-6e79-494f-a917-7e445b7b8b0f';
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    try {
+      console.log(`Forwarding message to n8n webhook: ${message}`);
+      
+      const n8nResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!n8nResponse.ok) {
+        throw new Error(`n8n webhook responded with status: ${n8nResponse.status}`);
+      }
+
+      const n8nData = await n8nResponse.json();
+      console.log('Received response from n8n:', n8nData);
+
+      // Renvoyer la réponse de n8n au client
+      res.json(n8nData);
+
+    } catch (error) {
+      console.error('Error forwarding message to n8n:', error);
+      res.status(502).json({ 
+        error: 'Failed to communicate with the AI agent.',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
