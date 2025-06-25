@@ -19,7 +19,9 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
   const apiUrl = '/api/chat';
   
   try {
-    console.log('Sending message to backend API:', message);
+    console.log('🚀 [DEBUG] Sending message to backend API:', message);
+    console.log('🚀 [DEBUG] API URL:', apiUrl);
+    console.log('🚀 [DEBUG] Current location:', window.location.href);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -29,8 +31,14 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
       body: JSON.stringify({ message })
     });
     
+    console.log('🚀 [DEBUG] Response status:', response.status);
+    console.log('🚀 [DEBUG] Response ok:', response.ok);
+    console.log('🚀 [DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
-      throw new Error(`Server responded with status: ${response.status}`);
+      const errorText = await response.text();
+      console.log('🚀 [DEBUG] Error response body:', errorText);
+      throw new Error(`Server responded with status: ${response.status}, body: ${errorText}`);
     }
     
     // Log the raw response for debugging
@@ -90,7 +98,10 @@ export async function sendMessageToNana(message: string): Promise<NanaResponse> 
     console.log('Extracted response message:', text);
     return { text };
   } catch (error) {
-    console.error('Error sending message to NANA:', error);
+    console.error('🚀 [DEBUG] Error sending message to NANA:', error);
+    console.error('🚀 [DEBUG] Error type:', typeof error);
+    console.error('🚀 [DEBUG] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('🚀 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return {
       text: "Je suis désolée, je rencontre des difficultés techniques. Merci de réessayer dans un instant."
     };
