@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           body: JSON.stringify({
             event: 'tts_generated',
-            text: text,
+            message: text,
             voice: voice,
             model: model,
             speed: speed,
