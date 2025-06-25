@@ -185,103 +185,43 @@ export default function Home() {
   // Process user input and handle API response
   const processUserMessage = async (text: string) => {
     if (!text.trim()) return;
-    
+
+    // Stop any ongoing speech or audio playback
+    stopSpeaking();
+    if (isSimulating) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setIsSimulating(false);
+      setSimulationVolume(0);
+    }
+
+    // Add user message to the chat
+    setMessages(prev => [...prev, { text, isUser: true, timestamp: new Date() }]);
+    setIsProcessing(true);
+
     try {
-      // Stop any ongoing speech or audio
-      if (isSpeaking) {
-        stopSpeaking();
-      }
-      
-      if (isSimulating) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        setIsSimulating(false);
-        setSimulationVolume(0);
-      }
-      
-      // Add user message to chat
-      setMessages(prev => [...prev, { 
-        text, 
-        isUser: true, 
-        timestamp: new Date() 
-      }]);
-      
-      // Set processing state
-      setIsProcessing(true);
-      
-      console.log("Envoi du message au webhook n8n:", text);
-      
-      // Send to API
+      // Send the message to the backend and get the AI's response
       const response = await sendMessageToNana(text);
       
-      console.log("Réponse reçue du webhook n8n:", response);
-      
-      // Extract response text
-      let responseText = "";
-      
-      // Case 1: If response is a string
-      if (typeof response === 'string') {
-        responseText = response;
+      // The sendMessageToNana function is designed to always return a response object
+      // with a 'text' property, even in case of an error.
+      const responseText = response?.text || "Désolé, une erreur inattendue est survenue.";
+
+      // Add AI response to the chat
+      setMessages(prev => [...prev, { text: responseText, isUser: false, timestamp: new Date() }]);
+
+      // Speak the AI's response
+      if (responseText) {
+        speak(responseText);
       }
-      // Case 2: If response contains text
-      else if (response?.text) {
-        responseText = response.text;
-      }
-      // Case 3: If we have an audio file but no text
-      else if (response?.mimeType && response.mimeType.includes('audio')) {
-        responseText = "Je suis désolé, je ne peux pas accéder directement au fichier audio, mais je reste à votre écoute.";
-        simulateAudio(5000);
-      }
-      // Case 4: No usable information
-      else {
-        responseText = "Je rencontre des difficultés techniques. Pourriez-vous reformuler votre question ?";
-      }
-      
-      // Add AI response to chat
-      setMessages(prev => [...prev, { 
-        text: responseText, 
-        isUser: false, 
-        timestamp: new Date() 
-      }]);
-      
-      // Lecture immédiate d'un court indicateur sonore pour montrer que ça fonctionne
-      if (isSpeechSupported && responseText) {
-        // Pour les réponses longues, commencer par lire une courte introduction
-        // pendant que l'audio complet se génère
-        if (responseText.length > 100) {
-          // Stopper toute synthèse vocale en cours
-          stopSpeaking();
-          
-          // Utiliser la synthèse du navigateur pour une réponse immédiate
-          // pendant que l'API OpenAI génère la réponse complète
-          const shortPrompt = "Je vous réponds tout de suite";
-          speakWithBrowser(shortPrompt, 1.2, 1);
-          
-          // Génération de l'audio complet avec OpenAI (légèrement retardée)
-          setTimeout(() => {
-            speak(responseText);
-          }, 1000); // Petit délai pour laisser l'intro se jouer
-        } else {
-          // Pour les réponses courtes, utiliser directement l'API vocale
-          speak(responseText);
-        }
-      }
-      
+
     } catch (error) {
-      console.error('Error processing input:', error);
-      
-      // Add error message to chat
-      setMessages(prev => [...prev, { 
-        text: "Je rencontre des difficultés techniques. Merci de réessayer dans un instant.", 
-        isUser: false, 
-        timestamp: new Date() 
-      }]);
-      
+      // This catch block is a fallback for unexpected errors during the process.
+      console.error('Failed to process user message:', error);
+      const errorMessage = "Je suis désolé, une erreur critique est survenue.";
+      setMessages(prev => [...prev, { text: errorMessage, isUser: false, timestamp: new Date() }]);
       toast({
-        title: "Erreur de communication",
-        description: "Impossible de communiquer avec NANA pour le moment.",
+        title: "Erreur Critique",
+        description: "Impossible de traiter la demande.",
         variant: "destructive"
       });
     } finally {
