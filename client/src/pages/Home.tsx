@@ -284,23 +284,6 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Test button for debugging */}
-        <div className="test-button-container" style={{ padding: '10px', borderTop: '1px solid #ccc' }}>
-          <button
-            onClick={() => processUserMessage("Bonjour")}
-            disabled={isProcessing}
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            TEST: Envoyer "Bonjour"
-          </button>
-        </div>
 
         {/* Input area */}
         <div className="input-container">
